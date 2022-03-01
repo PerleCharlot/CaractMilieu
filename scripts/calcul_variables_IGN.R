@@ -53,52 +53,7 @@ corresp_hbt_code_path <-paste0(output_path,"/correspondance_habitat_raster.csv")
 
 ### Programme -------------------------------------
 
-### Eaux libres (CS > Viewshed & CA > eau) ####
-
-# Chargement des vecteurs de tronçons et surface en eau (issu BD TOPO IGN)
-vect_surf_eau <- st_read(surface_eau_path)
-vect_tron_eau <- st_read(tronçon_eau_path)
-
-# Rasteriser les vecteurs
-rast_ref <- raster(chemin_mnt)
-rast_surf_eau <-fasterize(vect_surf_eau,rast_ref)
-rast_tron_eau <-rasterize(as(vect_tron_eau,"Spatial"),rast_ref, field=1)
-
-# Assemblage des rasters
-rast_eau <- merge(rast_surf_eau,rast_tron_eau)
-names(rast_eau) <- "eaux_libres"
-plot(rast_eau, colNA="black")
-
-# Calcul des variables topo directement issues du MNT 25m
-if(!dir.exists(paste0(output_path,"/var_IGN"))){
-  dir.create(paste0(output_path,"/var_IGN"))
-}
-
-# Sauvegarde fichier raster
-writeRaster(rast_eau, file= paste0(output_path,"/var_IGN/eaux_libres.TIF"))
-
-
 ### Infrastructures > artificialisation ####
-
-# Assemblage des différentes couches d'infrastructures
-# Charger les vecteurs infrastructures (batiment, linéaire cable, transport)
-bati_vect <- readOGR(bati_path)
-cable_line <- readOGR(cable_path)
-transp_vect <- readOGR(transp_path)
-
-# Transformer de ligne à polygone + singlepolygon
-cable_line_buf <- buffer(cable_line,10)
-multiP <- st_cast(st_as_sf(cable_line_buf), "MULTIPOLYGON")
-singleP <- st_cast(multiP, "POLYGON")
-cable_line_buf <- as_Spatial(singleP)
-# !! après examen sous QGIS, le refuge de la Pra disparait lors de la rastérisation
-bati_vect_buf <- buffer(bati_vect, 5)
-multiP <- st_cast(st_as_sf(bati_vect_buf), "MULTIPOLYGON")
-singleP <- st_cast(multiP, "POLYGON")
-bati_vect_buf <- as_Spatial(singleP)
-# Regrouper toutes les infrastructures
-infrastructures_vect <- bind(bati_vect_buf,transp_vect,cable_line_buf)
-st_write(st_as_sf(infrastructures_vect), paste0(output_path,"/var_IGN/infrastructures.gpkg"),append=F)
 
 ## Degré d'artificialisation/d'aménagement du pixel : ordinale, 0, 1, 2, 3 (pas à très aménagé) ##
 
