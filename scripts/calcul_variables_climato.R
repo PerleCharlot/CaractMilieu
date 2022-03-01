@@ -37,20 +37,20 @@ output_path <- paste0(wd,"/output/")
 dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Belledonne/"
 
 # Chemin des données SAFRAN (sur le serveur Infogeo, besoin connexion VPN)
-path_data_allslopes = "//infogeo//infogeo/Meteo_France/SAFRAN_montagne-CROCUS_2020/alp_allslopes"
+chemin_fichiersncdf <- "D:/Meteo_France/SAFRAN_montagne-CROCUS_2020/alp_allslopes"
 
 # Année pour laquelle on veut extraire la modélisation 
 #/!\ une année commence le 080106 ?? 1er août ? ou 1er juin ??)
 y = 2017 #(max 2017)
 
 # Chemin du fichier nc de l'année correspondante
-pro_file = paste0(path_data_allslopes, "/reanalysis/pro/PRO_",as.character(y),"080106_",as.character(y+1),"080106.nc")
+pro_file = paste0(path_data_allslopes, "/pro/PRO_",as.character(y),"080106_",as.character(y+1),"080106.nc")
+meteo_file = paste0(path_data_allslopes, "/meteo/FORCING_",as.character(y),"080106_",as.character(y+1),"080106.nc")
 
 # Numéro de massif étudié (ici, Belledonne = 8; cf table_massifs_METEOFRANCE dans dossier input)
 num_massif_etudie <- 8
 
 # Chemin raster MNT, exposition, pente de la zone étudiée
-
 MNT_path <- paste0(dos_var_sp,"/Milieux/IGN/mnt_25m_belledonne_cale.TIF")
 expo_path <- paste0(output_path,"var_topo/pas_utilisé/exposition_25m.TIF")
 pente_path <- paste0(output_path,"var_topo/pente_25m.TIF")
@@ -67,7 +67,7 @@ EPSG_2154 =  "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_
 
 ### Programme -------------------------------------
 
-## 1 - Création d'un raster ayant le numéro de combinaison des classes
+## 1 - Création d'un raster ayant le numéro de combinaison des classes ####
 
 # Chargement de la table des classes de SAFRAN CROCUS
 safran_classes_complet <- fread(classSAFCRO_path, dec=",")
@@ -147,16 +147,22 @@ combinaisons_zone_etude <- merge(data.frame("Number_of_points"=unique(num_points
 write.csv(df_combi_all,file=paste0(input_path,"/df_pixels_safran.csv"))
 write.csv(combinaisons_zone_etude,file=paste0(input_path,"/combinaisons_safran.csv"))
 
-## 2 - Calcul des variables climatiques
+## 2 - Calcul des variables climatiques ####
 
 # Test
-
-chemin_fichiersncdf = "//infogeo/infogeo/Meteo_France/SAFRAN_montagne-Crocus_2020/alp_allslopes/pro/"
-var_to_use = c("DSN_T_ISBA","TS_ISBA","RN_ISBA", "RAINF_ISBA") #"TG4", cette variable n'est pas incluse dans D0,D3, elle fait partie de l'ACTIVE GRID... (????)
-years_to_use = c(1998:2017)
+safran_classes_complet <- fread(classSAFCRO_path, dec=",")
+var_to_use_pro = c("RN_ISBA", "DSN_T_ISBA") 
+# Net Radiation; total snow depth
+# pas de temps = journalier
+var_to_use_meteo = c("Tair","Rainf","NEB", "Wind","Wind_DIR") 
+# temperature air, rainfall rate, nebulosity, wind speed, wind direction
+# pas de temps = horaire
 jours_ete_to_use = c("2017-06-17","2017-09-14") # ete (17 juin - 14 septembre = jours 320-44)
 jours_hiver_to_use = c("2017-01-01","2017-03-31") # hiver (1 janvier - 31 mars = 90 jours = jours 153-242)
+combinaisons_zone_etude <- fread(paste0(input_path,"/combinaisons_safran.csv"),drop="V1")
 liste_combinaisons_to_use = combinaisons_zone_etude$Number_of_points
+years_to_use = c(1991:2021) #moyenne sur 30 nas
+
 
 source(paste0(wd,"/scripts/extract_meteo_fct_maj.R"))
 
@@ -194,7 +200,9 @@ hist(meteo$nb_jr_precip_hiver)
 hist(meteo$nb_jr_precip_ete)
 
 
-# Replacer les Inf par 365
+# Replacer les Inf par 365 ?? pourquoi faire ça ?
+# date déneigement infinie = le couvert neigeux est présent toute l'année
+# durée enneigement infinie = le couvert neigeux est présent toute l'année
 str(meteo$date_deneig[161])
 
 any()
