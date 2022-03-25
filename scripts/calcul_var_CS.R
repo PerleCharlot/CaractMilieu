@@ -10,8 +10,7 @@ library(data.table)
 library(sf)
 library(fasterize)
 library(terra)
-
-
+library(rgrass7)
 library(rgdal)
 
 ### Fonctions -------------------------------------
@@ -72,8 +71,13 @@ resolution_etude = 25
 
 # Dossier des variables spatiales & chemins des fichiers
 dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Belledonne/"
+# vecteur emrprise carrée
+path_emprise <- paste0(dos_var_sp ,"/limites_etude/emprise.gpkg")
+path_N2000 <- paste0(dos_var_sp ,"/limites_etude/cembraie_N2000_limites.gpkg")
 # MNT 25m CALé sur le grille de REFERENCE
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
+chemin_mnt2 <- paste0(dos_var_sp ,"/Milieux/IGN/MNT_25m_50km_cale.tif")
+
 path_pente <- paste0(output_path,"/var_topo/pente_25m.tif")
 
 # Surface en eaux libres et tronçons rivières IGN
@@ -86,10 +90,20 @@ path_vecteur_habitat <- paste0(dos_var_sp,"/Milieux/Natura_2000/n_hab_dominants_
 path_vecteur_habitat_simplifié <- paste0(dos_var_sp,"/Milieux/Natura_2000/polygones_habitat_simplifié.gpkg")
 path_raster_habitat <- paste0(output_path,"/habitat_raster_25m.tif")
 
+# forêt (via IGN, qui semble au final plus précis que la couche d'habitats expertisés...)
+path_foret_IGN <- paste0(dos_var_sp ,"/Milieux/IGN/foret_vecteur.gpkg")
+path_foret_rast <- paste0(output_path ,"/var_intermediaire/foret_raster_IGN.TIF")
+
+# Occupation du sol 2020
+path_OCS <- paste0(dos_var_sp, "/Milieux/occupation_sol/OCS_2020_emprise.tif")
+
 #### Tables ####
 
 # Table correspondance habitat et autres infos
 tbl_hbt_path <- paste0(dos_var_sp,"/Milieux/Natura_2000/table_habitats.csv")
+
+tbl_esth_path <- paste0(wd,"/input/tables/table_OCS.csv")
+
 
 ### Programme -------------------------------------
 
@@ -124,34 +138,29 @@ plot(vecteur_infra,add=TRUE)
 
 ## VAR : distance à la forêt ##
 # /!!!\ effets de bords, il faudrait utiliser la couche forêt de l'IGN pour avoir hors zone natura 2000
-vecteur_habitat <- st_read(path_vecteur_habitat_simplifié)
-names(vecteur_habitat)
-tbl_hbt <- fread(tbl_hbt_path)
-names(tbl_hbt)
 
-dist_foret <- DistanceA(vecteur_habitat,
-                "habitat_forestier" ,  
-                "cdhab",
-                tbl_hbt,
-          chemin_mnt,
-          paste0(output_path,"/var_CS/distance_foret.tif"))
-plot(dist_foret,colNA="black")
+# Petite bidouille pour tester avec GRASS (sous Qgis)
+vecteur_foret <- st_read(path_foret_IGN)
+# retirer les forêts ouvertes + landes + fomration herbacée
+unique(vecteur_foret$TFV)
+# Champs rencontrés : Id_BIOTOPE|ID_BIOTOPE|*biotope|ID_NAT|ID_BIO|id_nat
+vecteur_foret_nett <- vecteur_foret[-grep(pattern = 'Lande|Formation herbacée|Forêt ouverte*',
+                                     ignore.case=TRUE,
+                                     x=vecteur_foret$TFV),]
+foret_rast <- fasterize(vecteur_foret_nett ,raster(chemin_mnt))
+#foret_rast[foret_rast==0] <- NA
+plot(foret_rast,colNA="black")
+writeRaster(foret_rast, paste0(output_path,"forest_raster_IGN.tif"))
 
-# coût de la pente
-pente <- raster(path_pente)
-plot(pente)
-plot(vecteur_habitat[,1],col="transparent", add=TRUE)
-
-plot(tr)
-
-
-library(gdistance)
-tr <- transition( 1/pente, transitionFunction = mean, directions = 4 )
-tr <- geoCorrection( tr, type="c", multpl=FALSE, scl=FALSE)
-costDistance(tr,vecteur_habitat)
+# raster friction = 1 partout
+r <- raster(chemin_mnt)
+r[] <- 1
+plot(r)
+writeRaster(r, paste0(output_path,"frictione_1.TIF"))
 
 # TODO :
 # - dans construction_var_inter sauvegarder vecteur d'habitat forestier
 # - enlever champ de commun et table dans fonction DistanceA
 # - calculer costDistance avec vecteur habitat forestier
+# - pour éviyter effet de bord, prendre foret plus large que N2000
 # - mieux ranger les fonctions : créer des scripts par dimension, faire passer calc var intermédiaires, etc
