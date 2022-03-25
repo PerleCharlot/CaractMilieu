@@ -52,8 +52,8 @@ path_raster_habitat <- paste0(output_path,"/habitat_raster_25m.tif")
 ### Programme -------------------------------------
 
 # Création des dossiers de sauvegarde
-if(!dir.exists(paste0(output_path,"/var_IGN"))){
-  dir.create(paste0(output_path,"/var_IGN"))
+if(!dir.exists(paste0(output_path,"/var_intermediaire"))){
+  dir.create(paste0(output_path,"/var_intermediaire"))
 }
 
 #### COUCHE VECTORIELLE INFRASTRUCTURES ####
@@ -75,7 +75,7 @@ singleP <- st_cast(multiP, "POLYGON")
 bati_vect_buf <- as_Spatial(singleP)
 # Regrouper toutes les infrastructures
 infrastructures_vect <- raster::bind(bati_vect_buf,transp_vect,cable_line_buf)
-st_write(st_as_sf(infrastructures_vect), paste0(output_path,"/var_IGN/infrastructures.gpkg"),append=F)
+st_write(st_as_sf(infrastructures_vect), paste0(output_path,"/var_intermediaire/infrastructures.gpkg"),append=F)
 
 #### COUCHE RASTER EAUX LIBRES ####
 
@@ -89,7 +89,7 @@ vect_tron_eau <- st_cast(st_as_sf(vect_tron_eau), "POLYGON")
 # Assembkage des vecteurs et sauvegarde
 vect_eaux_libres <- raster::bind(as_Spatial(vect_surf_eau) ,as_Spatial(vect_tron_eau))
 plot(vect_eaux_libres)
-st_write(st_as_sf(vect_eaux_libres), paste0(output_path,"/var_IGN/eaux_libres.gpkg"),append=F)
+st_write(st_as_sf(vect_eaux_libres), paste0(output_path,"/var_intermediaire/eaux_libres.gpkg"),append=F)
 
 # Rasteriser les vecteurs
 rast_ref <- raster(chemin_mnt)
@@ -100,4 +100,4 @@ rast_eau <- merge(rast_surf_eau,rast_tron_eau)
 names(rast_eau) <- "eaux_libres"
 plot(rast_eau, colNA="black")
 # Sauvegarde fichier raster
-writeRaster(rast_eau, file= paste0(output_path,"/var_IGN/eaux_libres.TIF"))
+writeRaster(rast_eau, file= paste0(output_path,"/var_CS/eaux_libres.TIF"))

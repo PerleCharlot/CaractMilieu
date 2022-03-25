@@ -7,11 +7,7 @@
 ### Librairies -------------------------------------
 
 library(data.table)
-
-
-library(raster)
 library(sf)
-library(fasterize)
 library(rgdal)
 
 ### Fonctions -------------------------------------
@@ -52,7 +48,8 @@ path_raster_habitat <- paste0(output_path,"/habitat_raster_25m.tif")
 
 # Table correspondance habitat et degré d'artificialisation (0 à 3, pas à très artificialisé)
 tbl_hbt_path <- paste0(dos_var_sp,"/Milieux/Natura_2000/table_habitats.csv")
-corresp_hbt_code_path <- paste0(output_path,"/correspondance_habitat_raster.csv")
+path_table_hbt <- paste0(dos_var_sp,"/Milieux/Natura_2000/table_cdhab.csv")
+path_table_corresp_hbt <- paste0(output_path,"/tables/correspondance_habitat_raster.csv")
 
 ### Programme -------------------------------------
 
@@ -69,7 +66,13 @@ vecteur_habitat <- merge(vecteur_habitat, correspondance_habitat, by="cdhab")
 
 
 tbl_hbt <- fread(tbl_hbt_path)
-tbl_correspo_code_rast <- fread(corresp_hbt_code_path, drop="V1")
+tbl_correspo_code_rast <- fread(path_table_corresp_hbt)
 tbl_hbt <- merge(tbl_hbt, tbl_correspo_code_rast, by = c("cdhab","lbhab"))
 names(tbl_hbt)[5] <- "code_raster"
 write.csv2(tbl_hbt, paste0(dos_var_sp,"/Milieux/Natura_2000/table_habitats.csv"),row.names = FALSE)
+
+#### Table liant habitat <-> attributs PV <-> code raster habitat ####
+table_cdhab <- fread(path_table_hbt)
+table_corresp_hbt <- fread(path_table_corresp_hbt)
+table_hbt <- merge(table_cdhab, table_corresp_hbt,by=c("cdhab","lbhab"))
+write.csv(table_hbt,paste0(output_path,"/tables/table_hbt_PV.csv"))
