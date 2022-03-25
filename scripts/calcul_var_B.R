@@ -29,9 +29,12 @@ dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Bel
 # chemin du dossier contenant les différentes couches spatiales iées aux habitats
 path_poly_hab <- paste0(dos_var_sp ,"/Milieux/Natura_2000/n_hab_dominants_n2000_s_r84_jointure.gpkg")
 path_rast_hab <- paste0(output_path,"/habitat_raster_25m.TIF")
+# Dossier contenant les NDVI
+path_dos_ndvi <- paste0(dos_var_sp,"/Milieux/NDVI/")
 
 # Emprise carré autour N2000
 path_emprise <- paste0(dos_var_sp,"/limites_etude/emprise.gpkg")
+chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
 #### Tables ####
 path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
@@ -43,6 +46,36 @@ path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
 ## VAR : GDD ##
 
 ## VAR : NDVI ##
+liste_ndvi <- list.files(path_dos_ndvi,".tif$",full.names = TRUE)
+liste_ndvi_été <- liste_ndvi[grep("_ete", liste_ndvi)]
+liste_ndvi_hiv <- liste_ndvi[grep("_hiv", liste_ndvi)]
+
+stack_ndvi_hiv <- stack(liste_ndvi_hiv)
+stack_ndvi_ete <- stack(liste_ndvi_été)
+
+# Moyenne sur les X années
+rast_ndvi_mean_été <- calc(stack_ndvi_ete, mean)
+rast_ndvi_mean_hiv <- calc(stack_ndvi_hiv, mean)
+plot(rast_ndvi_mean_hiv, colNA='black')
+
+# recaler sur raster de ref
+rast_ref <- raster(chemin_mnt)
+rast_ndvi_mean_été <- projectRaster(rast_ndvi_mean_été,rast_ref)
+rast_ndvi_mean_été_cale <- resample(rast_ndvi_mean_été, rast_ref)
+rast_ndvi_mean_hiv <- projectRaster(rast_ndvi_mean_hiv,rast_ref)
+rast_ndvi_mean_hiv_cale <- resample(rast_ndvi_mean_hiv, rast_ref)
+
+# crop à l'emprise
+emprise <- st_read(path_emprise)
+rast_ndvi_mean_été_cale_crop <- raster::crop(rast_ndvi_mean_été_cale,emprise)
+rast_ndvi_mean_hiv_cale_crop <- raster::crop(rast_ndvi_mean_hiv_cale,emprise)
+
+par(mfrow=c(1,2))
+plot(rast_ndvi_mean_été_cale_crop, main="NDVI été")
+plot(rast_ndvi_mean_hiv_cale_crop, main ="NDVI hiver")
+
+writeRaster(rast_ndvi_mean_été_cale_crop, paste0(output_path,"/var_B/NDVI_été.tif"))
+writeRaster(rast_ndvi_mean_hiv_cale_crop, paste0(output_path,"/var_B/NDVI_hiv.tif"))
 
 ## VAR : Bois sur pied ##
 
