@@ -44,3 +44,6 @@ vignettes/*.pdf
 # dossiers des inputs et des outputs
 input/
 output/
+
+# tableurs excels
+*.xlsx
