@@ -44,6 +44,7 @@ path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
 #### Quantité ####
 
 ## VAR : GDD ##
+# calculé dans script "calcul_var_CA"  dans ** conditions climatiques ***
 
 ## VAR : NDVI ##
 liste_ndvi <- list.files(path_dos_ndvi,".tif$",full.names = TRUE)
