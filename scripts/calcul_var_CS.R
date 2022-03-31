@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 
+# Dates de modification : 31-03-2022
 
 ### Librairies -------------------------------------
 
@@ -77,18 +77,15 @@ path_N2000 <- paste0(dos_var_sp ,"/limites_etude/cembraie_N2000_limites.gpkg")
 # MNT 25m CALé sur le grille de REFERENCE
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 chemin_mnt2 <- paste0(dos_var_sp ,"/Milieux/IGN/MNT_25m_50km_cale.tif")
-
-path_pente <- paste0(output_path,"/var_topo/pente_25m.tif")
+path_pente <- paste0(output_path,"/var_CA/pente_25m.tif")
 
 # Surface en eaux libres et tronçons rivières IGN
-path_vecteur_eaux_libres <- paste0(output_path,"/var_IGN/eaux_libres.gpkg")
+path_vecteur_eaux_libres <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
 # Bâti IGN (bâtiments, infrastructures de transport et transport par cable)
-path_vecteur_infrastructure <- paste0(output_path,"/var_IGN/infrastructures.gpkg")
+path_vecteur_infrastructure <- paste0(output_path,"/var_intermediaire/infrastructures.gpkg")
 
 # Habitats expertisés
-path_vecteur_habitat <- paste0(dos_var_sp,"/Milieux/Natura_2000/n_hab_dominants_n2000_s_r84_jointure.gpkg")
-path_vecteur_habitat_simplifié <- paste0(dos_var_sp,"/Milieux/Natura_2000/polygones_habitat_simplifié.gpkg")
-path_raster_habitat <- paste0(output_path,"/habitat_raster_25m.tif")
+path_raster_habitat <- paste0(output_path,"/var_intermediaire/habitat_raster_25m.tif")
 
 # forêt (via IGN, qui semble au final plus précis que la couche d'habitats expertisés...)
 path_foret_IGN <- paste0(dos_var_sp ,"/Milieux/IGN/foret_vecteur.gpkg")
@@ -101,27 +98,94 @@ path_OCS <- paste0(dos_var_sp, "/Milieux/occupation_sol/OCS_2020_emprise.tif")
 
 # Table correspondance habitat et autres infos
 tbl_hbt_path <- paste0(dos_var_sp,"/Milieux/Natura_2000/table_habitats.csv")
-
+# Table correspondance entre habitat et note esthétique
 tbl_esth_path <- paste0(wd,"/input/tables/table_OCS.csv")
-
+# Table correspondance entre habitat et vitesse de déplacement
+tbl_vitesse_path <- paste0(wd,"/input/tables/table_.csv")
 
 ### Programme -------------------------------------
 
 #### Similarité d'attributs du pixel avec ceux qui l’entourent ####
 
-## VAR : % de même habitat adjacent dans un rayon de 1km/500m/250m/100m ##
+rast_habitat <- raster(path_rast_habitat)
+
+## VAR : % d'habitat similaire dans un rayon de 1km/500m/250m/100m ##
+liste_rayons = c(100,250,500,1000) #en mètre
+
+for(rayon in liste_rayons){
+  rayon_mw = rayon
+  # Consruction moving windows de 100, 250, 500 et 1000m
+  f <- terra::focalMat(rast_habitat, rayon_mw, "circle") 
+  f[f > 0] <- 1
+  # Récupération des codes d'habitats
+  classes <- sort(as.numeric(unique(values(r_cale))))
+  
+  if(!dir.exists(paste0(output_path,"/var_CS/autre/couches_habitats_identiques_",rayon_mw,"m/"))){
+    dir.create(paste0(output_path,"/var_CS/autre/couches_habitats_identiques_",rayon_mw,"m/"))}
+  # Boucle de calcul de la proportion de même habitat dans un rayon de 500m, par habitat
+  for(i in classes){
+    # # TEST
+    #i = 2
+    print(i)
+    pclass <- function(x, y=c(i)) {
+      return( length(which(x %in% y)) / length(x) )}
+    ft <- terra::focal(r_cale,w=f, fun=pclass)
+    ft <- mask(ft,r_cale)
+    ft[r_cale != i] <- NA
+    writeRaster(ft,
+                filename=paste0(output_path,"/var_CS/autre/couches_habitats_identiques_",rayon_mw,"m/",i,".tif"))
+  }
+  # Rassembler les couches d'habitats similaires
+  x <- list.files(paste0(output_path,"/var_CS/autre/couches_habitats_identiques_",rayon_mw,"m/"),".tif", full.names=TRUE)
+  raster_habitat_voisinage <- Reduce(merge, lapply(x, raster))
+  writeRaster(raster_habitat_voisinage, 
+              filename=paste0(output_path,"/var_CS/habitat_similaire_",rayon_mw,"m.TIF"))
+  
+}
+
 ## VAR : taille du patch d’habitat ##
+# superficie, en m², du patch d'habitat auquel appartient le pixel
+# calcul réalisé sur la donnée raster pour parer les NA centraux trous rivière
+rast_habitat_vect <- rasterToPolygons(rast_habitat, dissolve = TRUE)
+rast_habitat_vect <- st_as_sf(rast_habitat_vect)
+rast_habitat_vect <- st_cast(rast_habitat_vect, "POLYGON")
+rast_habitat_vect$superficie <- st_area(rast_habitat_vect)
+raster_taille_patch_habitat <- fasterize(rast_habitat_vect,rast_habitat,
+                                          field='superficie')
+writeRaster(raster_taille_patch_habitat, 
+            filename=paste0(output_path,"/var_CS/taille_patch_habitat_m2.TIF"))
 
 #### Capacité d’atteinte ce pixel par un usager ####
 
 ## VAR : temps d’accès au pixel ##
 # (rugosité X distance aux chemins/point haut remontées mécaniques X distance point d’entrée)
 
+rast_habitat <- raster(path_rast_habitat)
+table_vitesse_habitat <- fread(tbl_vitesse_path)
+
+# 1 - surface de rugosité
+
+# TODO :
+# lire : Weiss et al 2018, A global map of travel time
+# afin de créer une table habitat <-> vitesse potentielle de déplacement
+
+# 2 - matrice de transition
+# gdistance :: transition
+# 3 - accumulations coûts
+
+
 #### Viewshed/ information visuelle ####
 
 ## VAR : note esthétique moyenne perçue des habitats visibles ##
 ## VAR : sommets visibles depuis le pixel ##
-## VAR : présence d’eaux libres / eaux libres visibles ##
+
+## VAR : distance à l'eau ##
+eau_vect <- st_read(path_vecteur_eaux_libres)
+vect_obj_rast <- fasterize(eau_vect,raster(chemin_mnt))
+dist_vect_obj_rast <- terra::distance(vect_obj_rast)
+plot(dist_vect_obj_rast, colNA='black')
+writeRaster(dist_vect_obj_rast, paste0(output_path,"/var_CS/distance_eau.tif"))
+
 
 #### Empreinte des infrastructures ####
 
@@ -132,7 +196,6 @@ dist_infra <- DistanceA(vect_obj= vecteur_infra,
                         chemin_output = paste0(output_path,"/var_CS/distance_infrastructure.tif"))
 plot(dist_infra)
 plot(vecteur_infra,add=TRUE)
-
 
 #### Proximité d'un couvert forestier ####
 

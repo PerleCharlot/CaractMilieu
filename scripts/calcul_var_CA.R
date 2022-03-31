@@ -12,8 +12,7 @@ library(sf)
 library(dplyr)
 library(vegan)
 library(data.table)
-
-# library(fasterize)
+library(fasterize)
 # library(rgdal)
 
 ### Fonctions -------------------------------------
@@ -53,6 +52,7 @@ dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Bel
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 path_LS_factor <- paste0(dos_var_sp,"/Milieux/LS_factor/ls_factor_Belledonne.tif")
 path_landform5m <- paste0(output_path,"/var_intermediaire/landform_5m_crs.tif")
+path_eau_vect <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
 
 #### Tables ####
 path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat.csv")
@@ -138,6 +138,7 @@ rast_LS <- projectRaster(rast_LS, MNT25m)# CROP en même temps!
 writeRaster(rast_LS, paste0(output_path,"/var_CA/LS_factor.tif"))
 
 ## VAR : rayonnement ##
+# cf conditions climatiques
 
 ## VAR : diversité de reliefs ##
 LF5m <- raster(path_landform5m)
@@ -181,3 +182,7 @@ TWI25m <- upslope.area(MNT25m, atb = TRUE)$atb
 writeRaster(TWI25m, filename=paste0(output_path,"/var_CA/TWI_25m.tif"))
 
 ## VAR : présence d'eaux libres dans le pixel ##
+eau_vect <- st_read(path_eau_vect)
+vect_obj_rast <- fasterize(eau_vect,raster(chemin_mnt), background = 0)
+plot(vect_obj_rast, colNA='black')
+writeRaster(vect_obj_rast, paste0(output_path,"/var_CA/presence_eau.tif"))
