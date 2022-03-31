@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE ABIOTIQUE
 # Auteure : Perle Charlot
 # Date de création : 17-11-2021
-# Dates de modification : 27-03-2022
+# Dates de modification : 31-03-2022
 
 ### Librairies -------------------------------------
 library(raster)
@@ -11,12 +11,29 @@ library(exactextractr)
 library(sf)
 library(dplyr)
 library(vegan)
+library(data.table)
 
-# library(data.table)
 # library(fasterize)
 # library(rgdal)
 
 ### Fonctions -------------------------------------
+
+mean_ete <- function(i){
+  index_col_var <- which(names(table_NoPs) %in% paste0(liste_var[i],"_",été))
+  df_var <- as.data.frame(table_NoPs)[,index_col_var]
+  mean_var <- apply(df_var,1,mean)
+  df_var <- data.frame( mean_var)
+  names(df_var)[1] <- paste0(liste_var[i],"_mean_ete")
+  return(df_var)
+}
+mean_hiver <- function(i){
+  index_col_var <- which(names(table_NoPs) %in% paste0(liste_var[i],"_",hiver))
+  df_var <- as.data.frame(table_NoPs)[,index_col_var]
+  mean_var <- apply(df_var,1,mean)
+  df_var <- data.frame( mean_var)
+  names(df_var)[1] <- paste0(liste_var[i],"_mean_hiver")
+  return(df_var)
+}
 
 ### Constantes -------------------------------------
 
@@ -38,8 +55,64 @@ path_LS_factor <- paste0(dos_var_sp,"/Milieux/LS_factor/ls_factor_Belledonne.tif
 path_landform5m <- paste0(output_path,"/var_intermediaire/landform_5m_crs.tif")
 
 #### Tables ####
+path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat.csv")
 
 ### Programme -------------------------------------
+
+#### Conditions climatiques ####
+
+table_NoPs <- fread(path_table_NoPs)
+
+# Définition mois d'été et mois d'hiver
+été = c("06","07","08","09") # de début juin à fin septembre ?
+hiver = c("12","01","02","03") # de décembre à mars ?
+
+liste_var = c("tmin","tmax","tmean","GDD","t10","t90",
+              "nbJgel","nbJssdegel",
+              "prmean","prsum","rain0",
+              "nebmean","nbJneb10","nbJneb90",
+              "windmean","wind10","wind90",
+              "htNeigmean","raymean") # 19 variables climatiques
+
+## VAR : Température ##
+#(décile des T journallières puis moyenne mensuelle pour discerner extrême chaud et extrême froid)
+## VAR : Précipitations ##
+# nombre de jours sans pluie
+## VAR : Neige ##
+# épaisseur de neige moyenne
+## VAR : Gel ##
+# nombre de jours sans dégel
+# nombre de jours de gel
+## VAR : Nébulosité ##
+# nb jour avec forte ou faible nébulosité
+## VAR : Vent ##
+# vent (décile sur vent moyen journalier pour discerner grand vent)
+
+df_mean_ete <- do.call(cbind,lapply(1:length(liste_var),mean_ete)) 
+df_mean_ete$NoPs = table_NoPs$V1
+
+df_mean_hiver <- do.call(cbind,lapply(1:length(liste_var),mean_hiver)) 
+df_mean_hiver$NoPs = table_NoPs$V1
+
+# Création et remplissage des rasters climatiques
+rast_NoPs <- raster(paste0(input_path,"/raster_NoP.tif"))
+names(rast_NoPs) = "NoPs"
+
+rast_climato_ete <- subs(rast_NoPs, df_mean_ete, by="NoPs", which=1:(dim(df_mean_ete)[2]-1))
+writeRaster(rast_climato_ete,
+            paste0(output_path,"/var_CA/", liste_var,"_ete.tif"),
+            bylayer=TRUE)
+
+rast_climato_hiver <- subs(rast_NoPs, df_mean_hiver, by="NoPs", which=1:(dim(df_mean_hiver)[2]-1))
+writeRaster(rast_climato_hiver,
+            paste0(output_path,"/var_CA/", liste_var,"_hiver.tif"),
+            bylayer=TRUE)
+# Transférer GDD de var_CA à var_B
+CA <- list.files(paste0(output_path,"/var_CA/"), full.names = TRUE)
+from <- CA[grep("GDD",CA)]
+to <-  paste0(output_path,"/var_B/GDD_",c("ete","hiver"),".tif")
+to
+file.copy(from,to)
 
 #### Conditions topographiques ####
 
