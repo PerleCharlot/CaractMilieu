@@ -9,9 +9,11 @@
 library(data.table)
 library(sf)
 library(fasterize)
+library(raster)
 library(terra)
 library(rgrass7)
 library(rgdal)
+library(gdistance)
 
 ### Fonctions -------------------------------------
 
@@ -83,16 +85,21 @@ path_pente <- paste0(output_path,"/var_CA/pente_25m.tif")
 path_vecteur_eaux_libres <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
 # Bâti IGN (bâtiments, infrastructures de transport et transport par cable)
 path_vecteur_infrastructure <- paste0(output_path,"/var_intermediaire/infrastructures.gpkg")
+# Centroides des parkings dans et autour de la zone N2000
+path_points_parkings <- paste0(output_path,"/var_intermediaire/points_parkings.gpkg")
 
 # Habitats expertisés
 path_raster_habitat <- paste0(output_path,"/var_intermediaire/habitat_raster_25m.tif")
+# Occupation du sol 2020
+path_raster_habitat_OCS <-paste0(output_path,"/var_intermediaire/habitats_OCS.tif")
 
 # forêt (via IGN, qui semble au final plus précis que la couche d'habitats expertisés...)
 path_foret_IGN <- paste0(dos_var_sp ,"/Milieux/IGN/foret_vecteur.gpkg")
 path_foret_rast <- paste0(output_path ,"/var_intermediaire/foret_raster_IGN.TIF")
 
-# Occupation du sol 2020
-path_OCS <- paste0(dos_var_sp, "/Milieux/occupation_sol/OCS_2020_emprise.tif")
+
+# Raster des sentiers
+path_raster_sentier <- paste0(output_path,"/var_intermediaire/raster_sentier.tif")
 
 #### Tables ####
 
@@ -101,7 +108,10 @@ tbl_hbt_path <- paste0(dos_var_sp,"/Milieux/Natura_2000/table_habitats.csv")
 # Table correspondance entre habitat et note esthétique
 tbl_esth_path <- paste0(wd,"/input/tables/table_OCS.csv")
 # Table correspondance entre habitat et vitesse de déplacement
-tbl_vitesse_path <- paste0(wd,"/input/tables/table_.csv")
+tbl_vitesse_path <- paste0(wd,"/input/tables/table_habitats.csv")
+
+# Table correspondance entre habitat OCs et vitesse de déplacement
+tbl_vitesse_OCS_path <- paste0(wd,"/input/tables/table_vitesse_OCS.csv")
 
 ### Programme -------------------------------------
 
@@ -160,19 +170,69 @@ writeRaster(raster_taille_patch_habitat,
 ## VAR : temps d’accès au pixel ##
 # (rugosité X distance aux chemins/point haut remontées mécaniques X distance point d’entrée)
 
-rast_habitat <- raster(path_rast_habitat)
-table_vitesse_habitat <- fread(tbl_vitesse_path)
+# rast_habitat <- raster(path_raster_habitat)
+# names(rast_habitat) = "code_raster"
+# table_vitesse_habitat <- fread(tbl_vitesse_path)
+# rast_vitesse <- subs(rast_habitat,table_vitesse_habitat, by = "code_raster", which = "vitesse")
+
+# !!! comme il faut qu'il y ait une vitesse sur les points d'entrée (parkings),
+#     on utilise une couche habitat couvrant une emprise plus large que N2000
+#     --> OCS 2020
+rast_habitat <- raster(path_raster_habitat_OCS)
+table_vitesse_habitat <- fread(tbl_vitesse_OCS_path)
+names(rast_habitat) = "classe"
 
 # 1 - surface de rugosité
+rast_vitesse <- subs(rast_habitat,table_vitesse_habitat, by = "classe", which = "vitesse")
+rast_sentier <- raster(path_raster_sentier) 
+plot(rast_sentier, colNA="black")
+rast_sentier[rast_sentier==1] <- 5 # valeur de 5km/h
 
-# TODO :
-# lire : Weiss et al 2018, A global map of travel time
-# afin de créer une table habitat <-> vitesse potentielle de déplacement
+rast_vitesse_aplat <- mask(rast_vitesse,rast_sentier,inverse=TRUE,updatevalue=5)
+
+plot(rast_vitesse_aplat, colNA="black",main="vitesse à plat")
+
+writeRaster(rast_vitesse_aplat, paste0(output_path,"/var_intermediaire/raster_vitesse_a_plat_OCS.tif"), overwrite=TRUE)
+
+# Script N. Fontaine "DB_alpChard_leastcostpath.R"
+# L'ajustement par rapport à l'altitude se fait en rapport 
+# de la diminution de la VO2 max avec la raréfaction de l'O2
+# selon la formule proposée dans Weiss et al. 2018
+# Pour la pente, c'est la fonction de Tobler qui est utilisée, 
+# comme présenté dans Weiss et al. 2018
+# fact_ajust_altitude = function (altitude) { 1.016 * exp(-0.0001072 * altitude) }
+# fact_ajust_pente = function (angle_pente) { 6 * exp(-3.5 * abs(tan(0.01745 * angle_pente) + 0.05)) /5 }
+
+MNT <- raster(chemin_mnt)
+pente <- raster(path_pente)
+
+MNT_ajuste <- 1.016 * exp(-0.0001072 * MNT)
+pente_ajuste <- 6 * exp(-3.5 * abs(tan(0.01745 * pente) + 0.05)) /5
+
+# comment considérer les vitesses en hiver ??
+# à quel point la neige bloque le mouvement ?
+
+fraster_friction <- rast_vitesse_aplat * MNT_ajuste * pente_ajuste
+plot(fraster_friction, colNA='black',main='vitesse ajustee')
+writeRaster(fraster_friction, paste0(output_path,"/var_intermediaire/raster_vitesse_ajustee_OCS.tif"), overwrite=TRUE)
 
 # 2 - matrice de transition
-# gdistance :: transition
-# 3 - accumulations coûts
+transition_ete <- transition(fraster_friction, function(x) 1/mean(x), 8)
+transition_ete_geocorrigee <- geoCorrection(transition_ete)
 
+# 3 - accumulations coûts
+coord_parkings <- st_read(path_points_parkings)
+coord_parkings <- as_Spatial(coord_parkings)
+
+# coord_parkings_test <- st_read("C:/Users/perle.charlot/Documents/PhD/DATA/R_git/CaractMilieu/output//var_intermediaire/points_parkings_test.gpkg")
+# coord_parkings_test <- as_Spatial(coord_parkings_test)
+# temp.raster_ete_test <- accCost(transition_ete_geocorrigee, coord_parkings_test)
+# plot(temp.raster_ete_test, colNA='black')
+
+# !!! si les points d'entrée ne sont pas sur le raster, la fonction ne les considère pas
+temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_parkings)
+plot(temp.raster_ete, colNA='black')
+writeRaster(temp.raster_ete, paste0(output_path,"/var_intermediaire/raster_temps_ete_OCS.tif"), overwrite=TRUE)
 
 #### Viewshed/ information visuelle ####
 
