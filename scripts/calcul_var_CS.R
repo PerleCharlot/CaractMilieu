@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 31-03-2022
+# Dates de modification : 29-05-2022
 
 ### Librairies -------------------------------------
 
@@ -85,8 +85,8 @@ path_pente <- paste0(output_path,"/var_CA/pente_25m.tif")
 path_vecteur_eaux_libres <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
 # Bâti IGN (bâtiments, infrastructures de transport et transport par cable)
 path_vecteur_infrastructure <- paste0(output_path,"/var_intermediaire/infrastructures.gpkg")
-# Centroides des parkings dans et autour de la zone N2000
-path_points_parkings <- paste0(output_path,"/var_intermediaire/points_parkings.gpkg")
+# Points d'entrée (centroides parking + hauts de 2 remontées mécaniques)
+path_points_entrée <- paste0(output_path,"/var_intermediaire/pts_entree_été.gpkg")
 
 # Habitats expertisés
 path_raster_habitat <- paste0(output_path,"/var_intermediaire/habitat_raster_25m.tif")
@@ -178,61 +178,62 @@ writeRaster(raster_taille_patch_habitat,
 # !!! comme il faut qu'il y ait une vitesse sur les points d'entrée (parkings),
 #     on utilise une couche habitat couvrant une emprise plus large que N2000
 #     --> OCS 2020
-rast_habitat <- raster(path_raster_habitat_OCS)
-table_vitesse_habitat <- fread(tbl_vitesse_OCS_path)
-names(rast_habitat) = "classe"
 
-# 1 - surface de rugosité
+###### En été ######
+
+# Lecture des données habitats + table correspondance des vitesses de déplacement
+rast_habitat <- raster(path_raster_habitat_OCS);names(rast_habitat) = "classe"
+table_vitesse_habitat <- fread(tbl_vitesse_OCS_path,dec=",")
+
+# Création raster de vitesses de déplacement en fonction de l'habitat = vitesse à plat
 rast_vitesse <- subs(rast_habitat,table_vitesse_habitat, by = "classe", which = "vitesse")
 rast_sentier <- raster(path_raster_sentier) 
-plot(rast_sentier, colNA="black")
+#plot(rast_sentier, colNA="black")
+# Forcer à passer à 5km.h-1 sur les sentiers
 rast_sentier[rast_sentier==1] <- 5 # valeur de 5km/h
-
 rast_vitesse_aplat <- mask(rast_vitesse,rast_sentier,inverse=TRUE,updatevalue=5)
-
-plot(rast_vitesse_aplat, colNA="black",main="vitesse à plat")
-
+#plot(rast_vitesse_aplat, colNA="black",main="vitesse à plat")
 writeRaster(rast_vitesse_aplat, paste0(output_path,"/var_intermediaire/raster_vitesse_a_plat_OCS.tif"), overwrite=TRUE)
 
-# Script N. Fontaine "DB_alpChard_leastcostpath.R"
+# Ajustement de la vitesse à plat par le relief (pente + altitude)
 # L'ajustement par rapport à l'altitude se fait en rapport 
 # de la diminution de la VO2 max avec la raréfaction de l'O2
 # selon la formule proposée dans Weiss et al. 2018
-# Pour la pente, c'est la fonction de Tobler qui est utilisée, 
-# comme présenté dans Weiss et al. 2018
-# fact_ajust_altitude = function (altitude) { 1.016 * exp(-0.0001072 * altitude) }
-# fact_ajust_pente = function (angle_pente) { 6 * exp(-3.5 * abs(tan(0.01745 * angle_pente) + 0.05)) /5 }
-
 MNT <- raster(chemin_mnt)
 pente <- raster(path_pente)
-
 MNT_ajuste <- 1.016 * exp(-0.0001072 * MNT)
 pente_ajuste <- 6 * exp(-3.5 * abs(tan(0.01745 * pente) + 0.05)) /5
 
 # comment considérer les vitesses en hiver ??
 # à quel point la neige bloque le mouvement ?
 
-fraster_friction <- rast_vitesse_aplat * MNT_ajuste * pente_ajuste
-plot(fraster_friction, colNA='black',main='vitesse ajustee')
-writeRaster(fraster_friction, paste0(output_path,"/var_intermediaire/raster_vitesse_ajustee_OCS.tif"), overwrite=TRUE)
+rast_vitesse_ajustee <- rast_vitesse_aplat * MNT_ajuste * pente_ajuste
+#plot(rast_vitesse_ajustee , colNA='black',main='vitesse ajustee')
+writeRaster(rast_vitesse_ajustee , paste0(output_path,"/var_intermediaire/raster_vitesse_ajustee_OCS.tif"), overwrite=TRUE)
 
-# 2 - matrice de transition
-transition_ete <- transition(fraster_friction, function(x) 1/mean(x), 8)
+# éviter les pb autour de 0
+rast_vitesse_ajustee[rast_vitesse_ajustee<0.001] <- 0.001
+# passer de km.h-1 en min.m-1 car fonction transition en m.min-1
+rast_vitesse_ajustee_2 <- 1/ (rast_vitesse_ajustee * (100/6))
+#plot(rast_vitesse_ajustee_test , colNA='black',main='mètre par minute')
+
+# Calcul matrice de transition
+transition_ete <- transition(rast_vitesse_ajustee-2 , function(x) 1/mean(x), 8)
 transition_ete_geocorrigee <- geoCorrection(transition_ete)
-
-# 3 - accumulations coûts
-coord_parkings <- st_read(path_points_parkings)
-coord_parkings <- as_Spatial(coord_parkings)
-
-# coord_parkings_test <- st_read("C:/Users/perle.charlot/Documents/PhD/DATA/R_git/CaractMilieu/output//var_intermediaire/points_parkings_test.gpkg")
-# coord_parkings_test <- as_Spatial(coord_parkings_test)
-# temp.raster_ete_test <- accCost(transition_ete_geocorrigee, coord_parkings_test)
-# plot(temp.raster_ete_test, colNA='black')
-
+# Accumulations coûts
+coord_entrees <- st_read(path_points_entrée)
+coord_entrees <- as_Spatial(coord_entrees)
 # !!! si les points d'entrée ne sont pas sur le raster, la fonction ne les considère pas
-temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_parkings)
-plot(temp.raster_ete, colNA='black')
+temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_entrees) # temps en minutes
+#17h15- 21h04 
+# Error in shortest.paths(adjacencyGraph, v = startNode, mode = "out") : 
+#   At structural_properties.c:5475 : cannot run Bellman-Ford algorithm, Negative loop detected while calculating shortest paths
+
+plot(temp.raster_ete, colNA='black',main="Temps en min")
+
 writeRaster(temp.raster_ete, paste0(output_path,"/var_intermediaire/raster_temps_ete_OCS.tif"), overwrite=TRUE)
+writeRaster(temp.raster_ete/60, paste0(output_path,"/var_intermediaire/raster_temps_ete_OCS_heure.tif"), overwrite=TRUE)
+
 
 #### Viewshed/ information visuelle ####
 
