@@ -2,15 +2,92 @@
 # Nom : Calcul des variables de la dimension BIOMASSE
 # Auteure : Perle Charlot
 # Date de création : 25-03-2022
-# Dates de modification : -2022
+# Dates de modification : 30-05-2022
 
 ### Librairies -------------------------------------
 
 library(data.table)
 library(raster)
 library(dplyr)
+library(SPEI)
 
-### Fonctions -------------------------------------
+### Fonctions --------------------------------------
+
+# Calcul de l'ETP, en mm, par l'équation de Penman. Par défaut, taille = "short"
+calculETP <- function(i, taille = "short"){
+  
+  # # TEST
+  # i = 1
+  
+  NoP = table_meteo$V1[i]
+  taille = as.character(taille)
+  
+  # Tester sur une seule combinaison NoP
+  sample_table_meteo <- as.data.frame(table_meteo[i,])
+  # remettre en forme les données
+  tmin = unlist(sample_table_meteo[,grep("tmin",names(sample_table_meteo))])
+  tmax = unlist(sample_table_meteo[,grep("tmax",names(sample_table_meteo))])
+  U2 = unlist(sample_table_meteo[,grep("windmean",names(sample_table_meteo))])
+  Rs = unlist(sample_table_meteo[,grep("raymean",names(sample_table_meteo))])
+  
+  data_test <- data.frame('mois'=c(1:12),
+                          'tmin'=tmin,'tmax'=tmax,'Rs'=Rs,'U2'=U2)
+  
+  lat_i = NoP_safran[NoP_safran$Number_of_points == NoP,]$latitude
+  z_i = NoP_safran[NoP_safran$Number_of_points == NoP,]$alti_av 
+  
+  ETP <- penman(Tmin = data_test$tmin, #OK
+                Tmax = data_test$tmax ,  #OK
+                Rs =   data_test$Rs, #MJ.m-2.d-1 (par jour) incoming solar radiation !! OPTIONNEL
+                U2 =  data_test$U2, #vitesse moyenne du vent mensuel, m.s-1 (mètre par seconde)
+                lat= lat_i , # OK en degrés
+                z = z_i,
+                crop = taille,
+  )
+  
+  
+  # Ajouter NoP sur la ligne
+  df_ETP <- as.data.frame(t(ETP))
+  names(df_ETP) = month.name
+  df_ETP$NoP = NoP
+  
+  l_ETP <- as.list(df_ETP)
+  
+  return(l_ETP)
+  
+}
+
+# Fonction qui retourne l'ETP moyen pour une liste de mois de l'année donnée
+sum_ETP <- function(liste_mois, fct){ #fct, character pour nommer "sum" ou "mean"
+  fct = as.character(fct)
+  index_col_var <- which(names(ETP_all) %in% liste_mois)
+  df_var <- as.data.frame(ETP_all)[,index_col_var]
+  df_var <- as.data.frame(apply(df_var,2,as.numeric))
+  fct_ETP <- apply(df_var,1,sum) #sum des ETP mois par mois
+  df_var_2 <- data.frame(fct_ETP)
+  names(df_var_2) = paste0(fct,'ETP_',substitute(liste_mois))
+  df_var_2$NoP = as.numeric(ETP_all$NoP)
+  return(df_var_2)
+}
+
+# Fonction qui calcul le cumul de précipitations (en mm) sur une saison (donnée par une liste de mois)
+sum_precip <- function(liste_mois, fct){
+  
+  # # TEST
+  # liste_mois = été
+  # fct = "sum"
+  
+  fct = as.character(fct)
+  
+  index_col_var <- which(names(df_precip) %in% paste0("prsum_",liste_mois))
+  df_var <- as.data.frame(df_precip)[,index_col_var]
+  df_var <- as.data.frame(apply(df_var,2,as.numeric))
+  fct_precip <- apply(df_var,1,sum)
+  df_var_2 <- data.frame(fct_precip)
+  names(df_var_2) = paste0(fct,'precip_',substitute(liste_mois))
+  df_var_2$NoP = as.numeric(ETP_all$NoP)
+  return(df_var_2)
+}
 
 ### Constantes -------------------------------------
 
@@ -38,6 +115,8 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
 #### Tables ####
 path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
+path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat.csv")
+path_NoP_safran <- paste0(input_path,"/combinaisons_safran.csv")
 
 ### Programme -------------------------------------
 
@@ -111,3 +190,43 @@ writeRaster(rast_feuillage_hiv, paste0(output_path,"/var_B/abondance_feuillage_h
 #### Productivité ####
 
 ## VAR : P-ETP ##
+
+# Lecture table contenant toutes les variables météo nécessaires pour calcul ETP
+table_meteo <- fread(path_table_data_meteo)
+# Lecture table contenant combinaisons safran
+NoP_safran <- fread(path_NoP_safran,drop="V1")
+# calcul ETP pour tous les NoP
+ETP_all <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x))
+ETP_all <- as.data.frame(do.call(rbind, ETP_all))
+
+ETP_all_tall <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x,"tall"))
+ETP_all_tall <- as.data.frame(do.call(rbind, ETP_all_tall))
+
+# Définition des mois correspondant aux saisons étudiées (été et d'hiver)
+été = c("June","July","August","September") 
+hiver = c("December","January","February","March")
+# Calculs des ETP saisonniers
+ETP_été <- sum_ETP(été)
+ETP_hiver <- sum_ETP(hiver)
+df_meanETP <- merge(ETP_été, ETP_hiver, by ="NoP")
+
+# TODO : demander à Claire + Isa son avis sur le fait de mettre tall (0.5m) ou short (0.12m)
+#         demander avis sur valeurs ETP
+
+# TODO : sortir un vecteur de précipitation avec les précipitations en mm, pour chaque mois
+
+# les valeurs de précipitations me semblent assez faibles, à vérifier si le cumul est bien effectué 
+# + si c'est bien en mm
+
+# calcul cumul précipitations par saison
+df_meteo = as.data.frame(table_meteo)
+df_precip = df_meteo[,grep("prsum",names(df_meteo))]
+
+été = c("06","07","08","09") 
+hiver = c("12","01","02","03")
+
+sum_precip(été, "sum")
+sum_precip(hiver, "sum")
+
+# Calcul P-ETP
+
