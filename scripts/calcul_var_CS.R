@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 29-05-2022
+# Dates de modification : 30-05-2022
 
 ### Librairies -------------------------------------
 
@@ -199,41 +199,42 @@ writeRaster(rast_vitesse_aplat, paste0(output_path,"/var_intermediaire/raster_vi
 # L'ajustement par rapport à l'altitude se fait en rapport 
 # de la diminution de la VO2 max avec la raréfaction de l'O2
 # selon la formule proposée dans Weiss et al. 2018
-MNT <- raster(chemin_mnt)
-pente <- raster(path_pente)
-MNT_ajuste <- 1.016 * exp(-0.0001072 * MNT)
-pente_ajuste <- 6 * exp(-3.5 * abs(tan(0.01745 * pente) + 0.05)) /5
+MNT <- raster(chemin_mnt) ;MNT_ajuste <- 1.016 * exp(-0.0001072 * MNT)
+pente <- raster(path_pente);pente_ajuste <- 6 * exp(-3.5 * abs(tan(0.01745 * pente) + 0.05)) /5
+rast_vitesse_ajustee <- rast_vitesse_aplat * MNT_ajuste * pente_ajuste
+writeRaster(rast_vitesse_ajustee , paste0(output_path,"/var_intermediaire/raster_vitesse_ajustee_OCS.tif"), overwrite=TRUE)
 
 # comment considérer les vitesses en hiver ??
 # à quel point la neige bloque le mouvement ?
 
-rast_vitesse_ajustee <- rast_vitesse_aplat * MNT_ajuste * pente_ajuste
-#plot(rast_vitesse_ajustee , colNA='black',main='vitesse ajustee')
-writeRaster(rast_vitesse_ajustee , paste0(output_path,"/var_intermediaire/raster_vitesse_ajustee_OCS.tif"), overwrite=TRUE)
+raster_de_calcul = rast_vitesse_ajustee
 
 # éviter les pb autour de 0
-rast_vitesse_ajustee[rast_vitesse_ajustee<0.001] <- 0.001
+raster_de_calcul[raster_de_calcul<0.01] <- 0.01
 # passer de km.h-1 en min.m-1 car fonction transition en m.min-1
-rast_vitesse_ajustee_2 <- 1/ (rast_vitesse_ajustee * (100/6))
-#plot(rast_vitesse_ajustee_test , colNA='black',main='mètre par minute')
-
+raster_de_calcul <- 1/(raster_de_calcul * (100/6))
 # Calcul matrice de transition
-transition_ete <- transition(rast_vitesse_ajustee-2 , function(x) 1/mean(x), 8)
+transition_ete <- transition(raster_de_calcul , function(x) 1/mean(x), 8)
 transition_ete_geocorrigee <- geoCorrection(transition_ete)
 # Accumulations coûts
 coord_entrees <- st_read(path_points_entrée)
 coord_entrees <- as_Spatial(coord_entrees)
 # !!! si les points d'entrée ne sont pas sur le raster, la fonction ne les considère pas
 temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_entrees) # temps en minutes
-#17h15- 21h04 
-# Error in shortest.paths(adjacencyGraph, v = startNode, mode = "out") : 
-#   At structural_properties.c:5475 : cannot run Bellman-Ford algorithm, Negative loop detected while calculating shortest paths
+plot(temp.raster_ete/60, colNA='black',main="Temps en h")
+writeRaster(temp.raster_ete/60, paste0(output_path,"/var_CS/temps_acces_ete.tif"), overwrite=TRUE)
 
-plot(temp.raster_ete, colNA='black',main="Temps en min")
 
-writeRaster(temp.raster_ete, paste0(output_path,"/var_intermediaire/raster_temps_ete_OCS.tif"), overwrite=TRUE)
-writeRaster(temp.raster_ete/60, paste0(output_path,"/var_intermediaire/raster_temps_ete_OCS_heure.tif"), overwrite=TRUE)
-
+# test_1.tif : sans ajustement, entrée m.min-1, sortie en heures 
+#   --> IMPOSSIBLE
+# test_2.tif : sans ajustement, entrée min.m-1 (0.006-0.06), sortie en heures 
+#   --> PLAUSIBLE MAIS SOUS ESTIME
+# test_3.tif : avec ajustement pente, correction 0.05 (0.007-1.2), entrée min.m-1, sortie en heures 
+#   --> MIEUX MS TJRS SOUS ESTIME
+# test_4.tif : avec ajustement pente et MNT, correction 0.05 (0.008-1.2), entrée min.m-1, sortie en heures 
+#   --> PAS MAL
+# test_5.tif : avec ajustement pente et MNT, correction 0.01 (0.008-6), entrée min.m-1, sortie en heures 
+#   --> BIEN, ON GARDE
 
 #### Viewshed/ information visuelle ####
 
