@@ -31,6 +31,8 @@ output_path <- paste0(wd,"/output/")
 dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Belledonne/"
 # MNT 25m CALé sur le grille de REFERENCE
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
+chemin_mnt_emprise <- paste0(dos_var_sp ,"/Milieux/IGN/MNT_25m_50km_cale.tif")
+
 # Chemin du MNT 25m CALé sur le grille de REFERENCE
 chemin_mnt_5 <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_belledonne.tif")
 # Surface en eaux libres et tronçons rivières IGN
@@ -42,11 +44,18 @@ foret_path <- paste0(dos_var_sp,"/Milieux/IGN/tronçon_vecteur.gpkg")
 bati_path <- paste0(dos_var_sp,"/Milieux/IGN/batiment_emprise.gpkg")
 transp_path <- paste0(dos_var_sp,"/Milieux/IGN/equipement_de_transport_emprise.gpkg")
 cable_path <- paste0(dos_var_sp,"/Milieux/IGN/transport_par_cable_emprise.gpkg")
-
 # Habitats expertisés
 path_vecteur_habitat <- paste0(dos_var_sp,"/Milieux/Natura_2000/n_hab_dominants_n2000_s_r84_jointure.gpkg")
 #path_vecteur_habitat_simplifié <- paste0(dos_var_sp,"/Milieux/Natura_2000/polygones_habitat_simplifié.gpkg")
 path_raster_habitat <- paste0(output_path,"/habitat_raster_25m.tif")
+
+# Carte Habitat OCS
+path_OCS <- paste0(dos_var_sp,"/Milieux/occupation_sol/OCS_2020_emprise.tif")
+
+# Chemin PPDIR
+PDIPR_path <- paste0(dos_var_sp,"/Usages/randonnée/CD38_2017_PDIPR/PPDIR_emprise.gpkg")
+sentier_path <- paste0(dos_var_sp,"/Milieux/IGN/troncon_route_transport_BD_TOPO_2019.gpkg")
+
 
 #### Tables ####
 
@@ -145,3 +154,65 @@ names(rast_eau) <- "eaux_libres"
 plot(rast_eau, colNA="black")
 # Sauvegarde fichier raster
 writeRaster(rast_eau, file= paste0(output_path,"/var_CS/eaux_libres.TIF"))
+
+#### COUCHE RASTER CHEMINS ####
+
+# Chargement des vecteurs de tronçons et surface en eau (issu BD TOPO IGN)
+vect_sentier <- st_read(sentier_path)
+vect_sentier <- st_zm(vect_sentier)
+vect_sentier <- buffer(as_Spatial(vect_sentier), 10) 
+vect_sentier <- st_cast(st_as_sf(vect_sentier), "POLYGON")
+rast_ref <- raster(chemin_mnt)
+rast_sentier <- fasterize(vect_sentier,rast_ref)
+plot(rast_sentier, colNA="black")
+writeRaster(rast_sentier, paste0(output_path,"/var_intermediaire/raster_sentier.tif"), overwrite=TRUE)
+
+#### COUCHE POINTS D'ENTREES ####
+vect_transport <- st_read(transp_path)
+vect_parking <- vect_transport[vect_transport$NATURE == "Parking",]
+point_parking <- st_centroid(vect_parking )
+st_write(point_parking, paste0(output_path,"/var_intermediaire/points_parkings.gpkg"))
+# les parkings sont-ils autant valides en été et en hiver ?
+
+# inclusion des remontées mécaniques :
+#  - point haut du télécabine de la Croix (ouvert weekends de juin + juillet + août + weeknds de septembre)
+#     --> départ randonnées pédestre + VTT en été
+#     point d'entrée en hiver pour ski de rando (et alpin)
+#  - point haut télésiège Bachat-Bouloud : VTT + randonnée pédestre (ouvert juillet - aout)
+
+trspt_cable <- st_read(cable_path)
+ind <- grepl(c("Télésiège de Bachat Bouloud|Télécabine de la Croix"),trspt_cable$TOPONYME)
+trspt_cable_pt_entree <- trspt_cable[ind,]
+
+pt_BchBo <- st_cast(trspt_cable_pt_entree[1,], "POINT")
+co_BchBO <- as.data.frame(st_coordinates(pt_BchBo))
+pt_ht_BchBo <- pt_BchBo[which(co_BchBO$Z == max(co_BchBO$Z)),]
+
+pt_Croix <- st_cast(trspt_cable_pt_entree[2,], "POINT")
+co_Croix <- as.data.frame(st_coordinates(pt_Croix))
+pt_ht_Croix <- pt_Croix[which(co_Croix$Z == max(co_Croix$Z)),]
+
+# est-il pertinent de ne consider que ces 2 remontées comme points d'entrée en hiver ???
+
+# Regrouper les points hauts des remontées mécaniques + les centroides des parkings
+pts_entree <- rbind(pt_ht_BchBo[,2], # 1 point
+      pt_ht_Croix[,2], # 1 point
+      point_parking[,2]) # 19 points
+pts_entree <- st_zm(pts_entree)
+# plot(pts_entree)
+st_write(pts_entree, paste0(output_path,"/var_intermediaire/pts_entree_été.gpkg"))
+
+# library(ggplot2)
+# ggplot() +
+#   geom_sf(data = trspt_cable_pt_entree) +
+#   geom_sf(data = pt_ht_Croix, color = 'green') + #
+#   geom_sf(data = pt_ht_BchBo, color = 'red') +
+#   coord_sf(datum = NULL)
+
+#### COUCHE RASTER HABITATS OCS ####
+rast_OCS <- raster(path_OCS) # à 10m, en 23 classes de land cover
+# ré-échantillonnage pour mettre bonne résolution (25m) et caler la grille
+rast_MNT_emprise <- raster(chemin_mnt_emprise)
+rast_OCS_resample <- resample(rast_OCS, rast_MNT_emprise, method="ngb") # méthode ngb car on veut garder des entiers pour les classes de land cover
+writeRaster(rast_OCS_resample, paste0(output_path,"/var_intermediaire/habitats_OCS.tif"))
+
