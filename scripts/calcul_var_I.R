@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension INFRASTRUCTURE
 # Auteure : Perle Charlot
 # Date de création : 08-01-2022
-# Dates de modification : 31-03-2022
+# Dates de modification : 01-06-2022
 
 ### Librairies -------------------------------------
 library(raster)
@@ -35,13 +35,14 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 path_raster_habitat <- paste0(output_path,"/var_intermediaire/habitat_raster_25m.tif")
 path_bati_vect <- paste0(output_path,"/var_intermediaire/infrastructures.gpkg")
 
+# Emprise carré autour N2000
+path_emprise <- paste0(dos_var_sp,"/limites_etude/emprise.gpkg")
 
 #### Tables ####
 path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat.csv")
 # Table correspondance habitat et degré d'artificialisation (0 à 3, pas à très artificialisé)
 corresp_hbt_artif_path <- paste0(dos_var_sp,"/Milieux/IGN/habitat_artificialisation.csv")
 corresp_hbt_code_path <-paste0(output_path,"/tables/correspondance_habitat_raster.csv")
-
 ### Programme -------------------------------------
 
 #### Niveau d'artificialisation du sol ####
@@ -75,3 +76,36 @@ plot(habitat_artif_rast,colNA="black")
 # Sauvegarde du vecteur et du raster
 st_write(habitat_artif_vect)
 writeRaster(habitat_artif_rast, paste0(output_path,"/var_I/degre_artif.tif"))
+
+#### Protection réglementaire ####
+
+## VAR : nature du zonage ##
+rasters <- list.files(paste0(output_path,"/var_intermediaire/statut/"),".tif", full.names = TRUE)
+stack_statut <- stack(rasters)
+# Agréger les zones de protection sans interdiction
+a = mask(stack_statut$INPG,stack_statut$SIC,
+         maskvalue=1,
+         updatevalue=1,
+         updateNA = TRUE)
+b = mask(stack_statut$znieff1,stack_statut$znieff2,
+         maskvalue=1,
+         updatevalue=1,
+         updateNA = TRUE)
+raster_zones1 = mask(a,b,
+         maskvalue=1,
+         updatevalue=1,
+         updateNA = TRUE)
+# Agréger les zones de protection avec interdiction
+raster_zones2 = mask(stack_statut$APPB,stack_statut$ENS,
+         maskvalue=2,
+         updatevalue=2,
+         updateNA = TRUE)
+# Agréger les zones de protection
+raster_zones = mask(raster_zones1,raster_zones2,
+                     maskvalue=2,
+                     updatevalue=2,
+                     updateNA = TRUE)
+# Passer les NA en 0 
+raster_zones[is.na(raster_zones)] <- 0
+plot(raster_zones,colNA='black')
+writeRaster(raster_zones,paste0(output_path,"/var_I/degre_interdiction.tif"))
