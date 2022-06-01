@@ -15,6 +15,31 @@ library(rgdal)
 
 ### Fonctions -------------------------------------
 
+# Fonction qui lit et rasterize une zone à statut réglementaire
+rasterizeZone <- function(chemin_zone, interdiction_zone, nom_raster){
+  # # TEST
+  # chemin_zone = path_ENS
+  # interdiction_zone = 2
+  # nom_raster = "ENS"
+  
+  raster_ref = raster(chemin_mnt)
+  
+  # charger vecteur
+  zone <- st_read(chemin_zone)
+  # vérifier projection
+  zone <- st_transform(zone,EPSG_2154)
+  zone$interdiction <- interdiction_zone
+  # rasteriser
+  rast_zone <- fasterize(zone, raster_ref, field = 'interdiction')
+  # sauvegarde
+  writeRaster(rast_zone, 
+              paste0(output_path,
+                     "/var_intermediaire/statut/",
+                     nom_raster,".tif"),
+              overwrite=TRUE)
+}
+
+
 ### Constantes -------------------------------------
 
 # Espace de travail
@@ -56,8 +81,25 @@ path_OCS <- paste0(dos_var_sp,"/Milieux/occupation_sol/OCS_2020_emprise.tif")
 PDIPR_path <- paste0(dos_var_sp,"/Usages/randonnée/CD38_2017_PDIPR/PPDIR_emprise.gpkg")
 sentier_path <- paste0(dos_var_sp,"/Milieux/IGN/troncon_route_transport_BD_TOPO_2019.gpkg")
 
+# Contour spatial ENS (Espace Naturel Sensible)
+path_ENS <- paste0(dos_var_sp,"/Milieux/statut_de_protection/ENS/contour_ENS.kml")
+# Contour spatial APPB (Arreté Prefectoral Protection Biotope)
+path_APPB <- paste0(dos_var_sp,"/Milieux/statut_de_protection/apb/N_ENP_APB_S_000.shp")
+# Contour spatial INPG (Inventaire National du Patrimoine Geologique)
+path_INPG <- paste0(dos_var_sp,"/Milieux/statut_de_protection/metrop_inpg/METROP_INPG_20220228.shp")
+# Contour spatial Znieff 1
+path_znieff1 <- paste0(dos_var_sp,"/Milieux/statut_de_protection/znieff1/znieff1.shp")
+# Contour spatial Znieff 2
+path_znieff2 <- paste0(dos_var_sp,"/Milieux/statut_de_protection/znieff2/znieff2.shp")
+# Contour spatial SIC (Site d'Interêt Communautaire) : Natura 2000
+path_SIC <- paste0(dos_var_sp,"/Milieux/statut_de_protection/ZSC_pSIC_SIC/sic2112.shp")
+
 
 #### Tables ####
+
+# Table degré de protection selon statut réglementaire
+path_table_protection <- paste0(input_path,"/tables/table_statut_de_protection_interdiction.csv")
+
 
 ### Programme -------------------------------------
 
@@ -216,3 +258,14 @@ rast_MNT_emprise <- raster(chemin_mnt_emprise)
 rast_OCS_resample <- resample(rast_OCS, rast_MNT_emprise, method="ngb") # méthode ngb car on veut garder des entiers pour les classes de land cover
 writeRaster(rast_OCS_resample, paste0(output_path,"/var_intermediaire/habitats_OCS.tif"))
 
+#### COUCHE RASTER STATUT DE PROTECTION ####
+# Lecture table interdction en fonction statu protection
+table_interd <- fread(path_table_protection)
+table_interd
+# Création des listes (chemins, interdictions, noms)
+liste_zones = list(path_APPB,path_ENS, path_INPG,
+                   path_SIC, path_znieff1, path_znieff2)
+liste_interdictions = c(2,2,1,1,1,1)
+liste_noms = c("APPB","ENS","INPG","SIC","znieff1","znieff2")
+# Création des rasters issus des vecteurs de zones
+mapply(rasterizeZone,liste_zones,liste_interdictions,liste_noms)
