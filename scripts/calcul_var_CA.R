@@ -53,6 +53,8 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 path_LS_factor <- paste0(dos_var_sp,"/Milieux/LS_factor/ls_factor_Belledonne.tif")
 path_landform5m <- paste0(output_path,"/var_intermediaire/landform_5m_crs.tif")
 path_eau_vect <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
+# Chemin raster NoP SAFRAN
+path_raster_NoP <- paste0(input_path,"/raster_NoP.tif")
 
 #### Tables ####
 path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat.csv")
