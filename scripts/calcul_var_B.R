@@ -58,7 +58,7 @@ calculETP <- function(i, taille = "short"){
 }
 
 # Fonction qui retourne l'ETP moyen pour une liste de mois de l'année donnée
-sum_ETP <- function(liste_mois, fct){ #fct, character pour nommer "sum" ou "mean"
+sum_ETP <- function(liste_mois, fct="sum"){ #fct, character pour nommer "sum" ou "mean"
   fct = as.character(fct)
   index_col_var <- which(names(ETP_all) %in% liste_mois)
   df_var <- as.data.frame(ETP_all)[,index_col_var]
@@ -71,7 +71,7 @@ sum_ETP <- function(liste_mois, fct){ #fct, character pour nommer "sum" ou "mean
 }
 
 # Fonction qui calcul le cumul de précipitations (en mm) sur une saison (donnée par une liste de mois)
-sum_precip <- function(liste_mois, fct){
+sum_precip <- function(liste_mois, fct="sum"){
   
   # # TEST
   # liste_mois = été
@@ -79,7 +79,7 @@ sum_precip <- function(liste_mois, fct){
   
   fct = as.character(fct)
   
-  index_col_var <- which(names(df_precip) %in% paste0("prsum_",liste_mois))
+  index_col_var <- which(names(df_precip) %in% paste0("precipsum_",liste_mois))
   df_var <- as.data.frame(df_precip)[,index_col_var]
   df_var <- as.data.frame(apply(df_var,2,as.numeric))
   fct_precip <- apply(df_var,1,sum)
@@ -113,9 +113,12 @@ path_dos_ndvi <- paste0(dos_var_sp,"/Milieux/NDVI/")
 path_emprise <- paste0(dos_var_sp,"/limites_etude/emprise.gpkg")
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
+# Chemin raster NoP SAFRAN
+path_raster_NoP <- paste0(input_path,"/raster_NoP.tif")
+
 #### Tables ####
 path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
-path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat.csv")
+path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat2.csv")
 path_NoP_safran <- paste0(input_path,"/combinaisons_safran.csv")
 
 ### Programme -------------------------------------
@@ -208,7 +211,7 @@ hiver = c("December","January","February","March")
 # Calculs des ETP saisonniers
 ETP_été <- sum_ETP(été)
 ETP_hiver <- sum_ETP(hiver)
-df_meanETP <- merge(ETP_été, ETP_hiver, by ="NoP")
+df_sumETP <- merge(ETP_été, ETP_hiver, by ="NoP")
 
 # TODO : demander à Claire + Isa son avis sur le fait de mettre tall (0.5m) ou short (0.12m)
 #         demander avis sur valeurs ETP
@@ -220,13 +223,27 @@ df_meanETP <- merge(ETP_été, ETP_hiver, by ="NoP")
 
 # calcul cumul précipitations par saison
 df_meteo = as.data.frame(table_meteo)
-df_precip = df_meteo[,grep("prsum",names(df_meteo))]
+df_precip = df_meteo[,grep("precipsum",names(df_meteo))]
 
 été = c("06","07","08","09") 
 hiver = c("12","01","02","03")
 
-sum_precip(été, "sum")
-sum_precip(hiver, "sum")
+P_été <- sum_precip(été)
+P_hiver <- sum_precip(hiver)
+df_sumP <- merge(P_été, P_hiver, by ="NoP")
 
 # Calcul P-ETP
+P_ETP_df <- merge(df_sumP, df_sumETP, by="NoP")
+P_ETP_df$bilan_hydrique_été <- P_ETP_df$sumprecip_été - P_ETP_df$sumETP_été
+P_ETP_df$bilan_hydrique_hiver <- P_ETP_df$sumprecip_hiver - P_ETP_df$sumETP_hiver
 
+# Création et remplissage des rasters climatiques
+rast_NoPs <- raster(path_raster_NoP)
+names(rast_NoPs) = "NoP"
+
+rast_PETP_ete <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_été")
+rast_PETP_hiver <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_hiver")
+plot(rast_PETP_ete)
+plot(rast_PETP_hiver)
+writeRaster(rast_PETP_ete, paste0(output_path,"/var_B/P_ETP_ete.tif"))
+writeRaster(rast_PETP_hiver, paste0(output_path,"/var_B/P_ETP_hiver.tif"))
