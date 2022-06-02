@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension BIOMASSE
 # Auteure : Perle Charlot
 # Date de création : 25-03-2022
-# Dates de modification : 30-05-2022
+# Dates de modification : 02-06-2022
 
 ### Librairies -------------------------------------
 
@@ -28,7 +28,8 @@ calculETP <- function(i, taille = "short"){
   tmin = unlist(sample_table_meteo[,grep("tmin",names(sample_table_meteo))])
   tmax = unlist(sample_table_meteo[,grep("tmax",names(sample_table_meteo))])
   U2 = unlist(sample_table_meteo[,grep("windmean",names(sample_table_meteo))])
-  Rs = unlist(sample_table_meteo[,grep("raymean",names(sample_table_meteo))])
+  #Rs = unlist(sample_table_meteo[,grep("raymean",names(sample_table_meteo))])
+  Rs = unlist(sample_table_meteo[,grep("SWDmean",names(sample_table_meteo))])
   
   data_test <- data.frame('mois'=c(1:12),
                           'tmin'=tmin,'tmax'=tmax,'Rs'=Rs,'U2'=U2)
@@ -36,15 +37,15 @@ calculETP <- function(i, taille = "short"){
   lat_i = NoP_safran[NoP_safran$Number_of_points == NoP,]$latitude
   z_i = NoP_safran[NoP_safran$Number_of_points == NoP,]$alti_av 
   
-  ETP <- penman(Tmin = data_test$tmin, #OK
-                Tmax = data_test$tmax ,  #OK
-                Rs =   data_test$Rs, #MJ.m-2.d-1 (par jour) incoming solar radiation !! OPTIONNEL
-                U2 =  data_test$U2, #vitesse moyenne du vent mensuel, m.s-1 (mètre par seconde)
+  ETP <- penman(Tmin = data_test$tmin, 
+                Tmax = data_test$tmax , 
+                Rs =   data_test$Rs*0.0864, #MJ.m-2.d-1 (par jour) incoming solar radiation !! OPTIONNEL
+                # Merci Nico :')
+                U2 =  data_test$U2, #vitesse moyenne du vent mensuel, m.s-1 
                 lat= lat_i , # OK en degrés
                 z = z_i,
                 crop = taille,
   )
-  
   
   # Ajouter NoP sur la ligne
   df_ETP <- as.data.frame(t(ETP))
@@ -54,8 +55,7 @@ calculETP <- function(i, taille = "short"){
   l_ETP <- as.list(df_ETP)
   
   return(l_ETP)
-  
-}
+  }
 
 # Fonction qui retourne l'ETP moyen pour une liste de mois de l'année donnée
 sum_ETP <- function(liste_mois, fct="sum"){ #fct, character pour nommer "sum" ou "mean"
@@ -118,7 +118,7 @@ path_raster_NoP <- paste0(input_path,"/raster_NoP.tif")
 
 #### Tables ####
 path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
-path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat2.csv")
+path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat3.csv")
 path_NoP_safran <- paste0(input_path,"/combinaisons_safran.csv")
 
 ### Programme -------------------------------------
@@ -202,48 +202,30 @@ NoP_safran <- fread(path_NoP_safran,drop="V1")
 ETP_all <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x))
 ETP_all <- as.data.frame(do.call(rbind, ETP_all))
 
-ETP_all_tall <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x,"tall"))
-ETP_all_tall <- as.data.frame(do.call(rbind, ETP_all_tall))
+#ETP_all_tall <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x,"tall"))
+#ETP_all_tall <- as.data.frame(do.call(rbind, ETP_all_tall))
 
 # Définition des mois correspondant aux saisons étudiées (été et d'hiver)
-été = c("June","July","August","September") 
-hiver = c("December","January","February","March")
+été = c("June","July","August","September") ; hiver = c("December","January","February","March")
 # Calculs des ETP saisonniers
-ETP_été <- sum_ETP(été)
-ETP_hiver <- sum_ETP(hiver)
-df_sumETP <- merge(ETP_été, ETP_hiver, by ="NoP")
-
-# TODO : demander à Claire + Isa son avis sur le fait de mettre tall (0.5m) ou short (0.12m)
-#         demander avis sur valeurs ETP
-
-# TODO : sortir un vecteur de précipitation avec les précipitations en mm, pour chaque mois
-
-# les valeurs de précipitations me semblent assez faibles, à vérifier si le cumul est bien effectué 
-# + si c'est bien en mm
+df_sumETP <- merge(sum_ETP(été), sum_ETP(hiver), by ="NoP")
 
 # calcul cumul précipitations par saison
 df_meteo = as.data.frame(table_meteo)
 df_precip = df_meteo[,grep("precipsum",names(df_meteo))]
-
-été = c("06","07","08","09") 
-hiver = c("12","01","02","03")
-
-P_été <- sum_precip(été)
-P_hiver <- sum_precip(hiver)
-df_sumP <- merge(P_été, P_hiver, by ="NoP")
-
+été = c("06","07","08","09") ;hiver = c("12","01","02","03")
+df_sumP <- merge(sum_precip(été), sum_precip(hiver), by ="NoP")
 # Calcul P-ETP
 P_ETP_df <- merge(df_sumP, df_sumETP, by="NoP")
 P_ETP_df$bilan_hydrique_été <- P_ETP_df$sumprecip_été - P_ETP_df$sumETP_été
 P_ETP_df$bilan_hydrique_hiver <- P_ETP_df$sumprecip_hiver - P_ETP_df$sumETP_hiver
-
+# Sauvegarde du tableau ETP
+write.csv(P_ETP_df, paste0(output_path,"/var_intermediaire/bilan_hydrique.csv"))
 # Création et remplissage des rasters climatiques
 rast_NoPs <- raster(path_raster_NoP)
 names(rast_NoPs) = "NoP"
-
 rast_PETP_ete <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_été")
 rast_PETP_hiver <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_hiver")
-plot(rast_PETP_ete)
-plot(rast_PETP_hiver)
-writeRaster(rast_PETP_ete, paste0(output_path,"/var_B/P_ETP_ete.tif"))
-writeRaster(rast_PETP_hiver, paste0(output_path,"/var_B/P_ETP_hiver.tif"))
+# Sauvegarde des rasters ETPS
+writeRaster(rast_PETP_ete, paste0(output_path,"/var_B/P_ETP_ete.tif"),overwrite=TRUE)
+writeRaster(rast_PETP_hiver, paste0(output_path,"/var_B/P_ETP_hiver.tif"),overwrite=TRUE)
