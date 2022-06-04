@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE ABIOTIQUE
 # Auteure : Perle Charlot
 # Date de création : 17-11-2021
-# Dates de modification : 31-03-2022
+# Dates de modification : 04-06-2022
 
 ### Librairies -------------------------------------
 library(raster)
@@ -71,10 +71,10 @@ hiver = c("12","01","02","03") # de décembre à mars ?
 
 liste_var = c("tmin","tmax","tmean","GDD","t10","t90",
               "nbJgel","nbJssdegel",
-              "prmean","prsum","rain0",
+              "prmean","precipsum","rain0",
               "nebmean","nbJneb10","nbJneb90",
               "windmean","wind10","wind90",
-              "htNeigmean","raymean") # 19 variables climatiques
+              "htNeigmean","SWDmean") # 19 variables climatiques
 
 ## VAR : Température ##
 #(décile des T journallières puis moyenne mensuelle pour discerner extrême chaud et extrême froid)
@@ -103,17 +103,16 @@ names(rast_NoPs) = "NoPs"
 rast_climato_ete <- subs(rast_NoPs, df_mean_ete, by="NoPs", which=1:(dim(df_mean_ete)[2]-1))
 writeRaster(rast_climato_ete,
             paste0(output_path,"/var_CA/", liste_var,"_ete.tif"),
-            bylayer=TRUE)
+            bylayer=TRUE,overwrite=TRUE)
 
 rast_climato_hiver <- subs(rast_NoPs, df_mean_hiver, by="NoPs", which=1:(dim(df_mean_hiver)[2]-1))
 writeRaster(rast_climato_hiver,
             paste0(output_path,"/var_CA/", liste_var,"_hiver.tif"),
-            bylayer=TRUE)
+            bylayer=TRUE,overwrite=TRUE)
 # Transférer GDD de var_CA à var_B
 CA <- list.files(paste0(output_path,"/var_CA/"), full.names = TRUE)
 from <- CA[grep("GDD",CA)]
 to <-  paste0(output_path,"/var_B/GDD_",c("ete","hiver"),".tif")
-to
 file.copy(from,to)
 
 #### Conditions topographiques ####
