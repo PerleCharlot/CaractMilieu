@@ -2,11 +2,12 @@
 # Nom : Regroupement des variables à travers chaque dimension
 # Auteure : Perle Charlot
 # Date de création : 31-03-2022
-# Dates de modification : 04-06-2022
+# Dates de modification : 07-06-2022
 
 ### Librairies -------------------------------------
 
 library(raster)
+library(terra)
 
 ### Fonctions -------------------------------------
 
@@ -38,7 +39,7 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
 CreateStackDimSeason <- function(nom_dim){
   
   # # #TEST
-  # nom_dim = "D"
+  # nom_dim = "B"
   
   nom_dim = as.character(nom_dim)
   
@@ -63,8 +64,20 @@ CreateStackDimSeason <- function(nom_dim){
   # Création de la stack par saison
   stack_hiv <- stack(c(r_hiv, r_both))
   stack_ete <- stack(c(r_ete, r_both))
-  # Sauvegarde de la stack par saison par dimension
-  writeRaster(stack_hiv, paste0(output_path,"/stack_dim/",nom_dim,".tif"), overwrite=TRUE)
+  # Utiliser terra pour garder les noms de chaque variables dans la stack
+  stack_hiv <- rast(stack_hiv)
+  stack_ete <- rast(stack_ete)
+  terra::writeRaster(stack_hiv, 
+                     paste0(output_path,"/stack_dim/",nom_dim,"_hiv.tif"), 
+                     overwrite=TRUE)
+  terra::writeRaster(stack_ete, 
+                     paste0(output_path,"/stack_dim/",nom_dim,"_ete.tif"), 
+                     overwrite=TRUE)
+  
+  # # Sauvegarde de la stack par saison par dimension
+  # writeRaster(stack_hiv, paste0(output_path,"/stack_dim/",nom_dim,"_hiv.tif"), overwrite=TRUE)
+  # writeRaster(stack_ete, paste0(output_path,"/stack_dim/",nom_dim,"_ete.tif"), overwrite=TRUE)
+  
   cat("\nDimension ", nom_dim, "terminée.")
   
 }
@@ -79,6 +92,8 @@ input_path <- paste0(wd,"/input/")
 output_path <- paste0(wd,"/output/")
 # Projection Lambert 93 (EPSG : 2154)
 EPSG_2154 =  "+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +units=m +no_defs "
+# Liste dimensions
+liste_dimensions =  c("CA","B","PV","CS","D","I")
 
 #### Données spatiales ####
 
@@ -91,6 +106,5 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
 ### Programme -------------------------------------
 
-liste_dimensions =  c("CA","B","PV","CS","D","I")
-
+# Stack des variables par dimension et par saison
 lapply(liste_dimensions,CreateStackDimSeason)
