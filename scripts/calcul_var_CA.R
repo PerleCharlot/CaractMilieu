@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE ABIOTIQUE
 # Auteure : Perle Charlot
 # Date de création : 17-11-2021
-# Dates de modification : 04-06-2022
+# Dates de modification : 24-06-2022
 
 ### Librairies -------------------------------------
 library(raster)
@@ -34,6 +34,33 @@ mean_hiver <- function(i){
   return(df_var)
 }
 
+var_mensuelle <- function(mois,
+                          liste_variables = liste_var){
+  # # TESt
+  # liste_variables = liste_var
+  # mois = "05"
+  
+  refMois <- data.frame(NomMois = c("avril","mai","juin","juillet","aout","septembre"),
+              ChiffreMois = c("04","05","06","07","08","09"))
+    
+  index_col_var <- which(names(table_NoPs) %in% paste0(liste_variables,"_",mois))
+  df_var <- as.data.frame(table_NoPs)[,index_col_var]
+  
+  df_var$NoPs = table_NoPs$NoPs
+  
+  # Création et remplissage des rasters climatiques
+  rast_NoPs <- raster(paste0(input_path,"/raster_NoP.tif"))
+  names(rast_NoPs) = "NoPs"
+  
+  rast_climato <- subs(rast_NoPs, df_var, by="NoPs", which=1:(dim(df_var)[2]-1))
+  writeRaster(rast_climato,
+              paste0(output_path,"/var_CA/par_periode/",refMois$NomMois[refMois$ChiffreMois == mois],"/", 
+                     liste_var,".tif"),
+              bylayer=TRUE,overwrite=TRUE)
+
+  return(df_var)
+}
+
 ### Constantes -------------------------------------
 
 # Espace de travail
@@ -57,17 +84,18 @@ path_eau_vect <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
 path_raster_NoP <- paste0(input_path,"/raster_NoP.tif")
 
 #### Tables ####
-path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat.csv")
+path_table_NoPs <- paste0(output_path,"/tables/table_NoPs_climat_final.csv")
 
 ### Programme -------------------------------------
 
 #### Conditions climatiques ####
 
 table_NoPs <- fread(path_table_NoPs)
+names(table_NoPs)[1] = "NoPs"
 
 # Définition mois d'été et mois d'hiver
-été = c("06","07","08","09") # de début juin à fin septembre ?
-hiver = c("12","01","02","03") # de décembre à mars ?
+# été = c("06","07","08","09") # de début juin à fin septembre ?
+# hiver = c("12","01","02","03") # de décembre à mars ?
 
 liste_var = c("tmin","tmax","tmean","GDD","t10","t90",
               "nbJgel","nbJssdegel",
@@ -75,6 +103,12 @@ liste_var = c("tmin","tmax","tmean","GDD","t10","t90",
               "nebmean","nbJneb10","nbJneb90",
               "windmean","wind10","wind90",
               "htNeigmean","SWDmean") # 19 variables climatiques
+
+
+mois_a_calculer = c("04","05","06","07","08","09")
+for(i in mois_a_calculer){
+  var_mensuelle(i, liste_var)
+}
 
 ## VAR : Température ##
 #(décile des T journallières puis moyenne mensuelle pour discerner extrême chaud et extrême froid)
