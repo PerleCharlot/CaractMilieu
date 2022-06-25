@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension BIOMASSE
 # Auteure : Perle Charlot
 # Date de création : 25-03-2022
-# Dates de modification : 02-06-2022
+# Dates de modification : 25-06-2022
 
 ### Librairies -------------------------------------
 
@@ -49,12 +49,14 @@ calculETP <- function(i, taille = "short"){
   
   # Ajouter NoP sur la ligne
   df_ETP <- as.data.frame(t(ETP))
-  names(df_ETP) = month.name
+  names(df_ETP) = c(paste0("ETP_",seq(1,12,1)))
   df_ETP$NoP = NoP
+  rownames(df_ETP) = NoP
   
-  l_ETP <- as.list(df_ETP)
+  #l_ETP <- as.list(df_ETP)
   
-  return(l_ETP)
+  #return(l_ETP)
+  return(df_ETP)
   }
 
 # Fonction qui retourne l'ETP moyen pour une liste de mois de l'année donnée
@@ -118,7 +120,7 @@ path_raster_NoP <- paste0(input_path,"/raster_NoP.tif")
 
 #### Tables ####
 path_table_hbt_PV <- paste0(output_path,"/tables/table_hbt_PV.csv")
-path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat3.csv")
+path_table_data_meteo <- paste0(output_path,"/tables/table_NoPs_climat_final.csv")
 path_NoP_safran <- paste0(input_path,"/combinaisons_safran.csv")
 
 ### Programme -------------------------------------
@@ -205,27 +207,53 @@ ETP_all <- as.data.frame(do.call(rbind, ETP_all))
 #ETP_all_tall <- lapply(1:dim(table_meteo)[1], function(x) calculETP(x,"tall"))
 #ETP_all_tall <- as.data.frame(do.call(rbind, ETP_all_tall))
 
-# Définition des mois correspondant aux saisons étudiées (été et d'hiver)
-été = c("June","July","August","September") ; hiver = c("December","January","February","March")
-# Calculs des ETP saisonniers
-df_sumETP <- merge(sum_ETP(été), sum_ETP(hiver), by ="NoP")
+# # Définition des mois correspondant aux saisons étudiées (été et d'hiver)
+# été = c("June","July","August","September") ; hiver = c("December","January","February","March")
+# # Calculs des ETP saisonniers
+# df_sumETP <- merge(sum_ETP(été), sum_ETP(hiver), by ="NoP")
 
 # calcul cumul précipitations par saison
 df_meteo = as.data.frame(table_meteo)
 df_precip = df_meteo[,grep("precipsum",names(df_meteo))]
-été = c("06","07","08","09") ;hiver = c("12","01","02","03")
-df_sumP <- merge(sum_precip(été), sum_precip(hiver), by ="NoP")
+df_precip$NoP = table_meteo$V1
+
+# été = c("06","07","08","09") ;hiver = c("12","01","02","03")
+# df_sumP <- merge(sum_precip(été), sum_precip(hiver), by ="NoP")
+
 # Calcul P-ETP
-P_ETP_df <- merge(df_sumP, df_sumETP, by="NoP")
-P_ETP_df$bilan_hydrique_été <- P_ETP_df$sumprecip_été - P_ETP_df$sumETP_été
-P_ETP_df$bilan_hydrique_hiver <- P_ETP_df$sumprecip_hiver - P_ETP_df$sumETP_hiver
+#P_ETP_df <- merge(df_sumP, df_sumETP, by="NoP")
+# P_ETP_df$bilan_hydrique_été <- P_ETP_df$sumprecip_été - P_ETP_df$sumETP_été
+# P_ETP_df$bilan_hydrique_hiver <- P_ETP_df$sumprecip_hiver - P_ETP_df$sumETP_hiver
+# # Sauvegarde du tableau ETP
+# write.csv(P_ETP_df, paste0(output_path,"/var_intermediaire/bilan_hydrique.csv"))
+
+# TODO : calculer la différence mois par mois ...
+
+names(df_precip) = c(paste0("P_",seq(1,12,1)),"NoP")
+P_ETP_mensuel <- merge(ETP_all, df_precip, by ="NoP")
+# Affreux cette boucle mais j'ai pas le courage de coder ça plus proprement ...  
+for(i in 1:12){
+    indexP = grep(paste0("^P_",i,"$"),names(P_ETP_mensuel))
+    indexETP = grep(paste0("^ETP_",i,"$"),names(P_ETP_mensuel)) 
+    P_ETP_mensuel$BH = P_ETP_mensuel[,indexP] - P_ETP_mensuel[, indexETP]
+    names(P_ETP_mensuel)[dim(P_ETP_mensuel)[2]] = paste0("BH_",i)
+}
 # Sauvegarde du tableau ETP
-write.csv(P_ETP_df, paste0(output_path,"/var_intermediaire/bilan_hydrique.csv"))
+write.csv(P_ETP_mensuel, paste0(output_path,
+                                "/var_intermediaire/table_bilan_hydrique.csv"))
+
 # Création et remplissage des rasters climatiques
 rast_NoPs <- raster(path_raster_NoP)
 names(rast_NoPs) = "NoP"
-rast_PETP_ete <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_été")
-rast_PETP_hiver <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_hiver")
+# Par périodes
+rast_PETP_mois <- subs(rast_NoPs, P_ETP_mensuel, 
+                       by="NoP", 
+                       which=grep("BH",names(P_ETP_mensuel)))
+writeRaster(rast_PETP_mois, bylayer = TRUE,suffix = names(rast_PETP_mois),
+            paste0(output_path,"/var_B/P_ETP_.tif"),overwrite=TRUE)
+
+# rast_PETP_ete <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_été")
+# rast_PETP_hiver <- subs(rast_NoPs, P_ETP_df, by="NoP", which="bilan_hydrique_hiver")
 # Sauvegarde des rasters ETPS
-writeRaster(rast_PETP_ete, paste0(output_path,"/var_B/P_ETP_ete.tif"),overwrite=TRUE)
-writeRaster(rast_PETP_hiver, paste0(output_path,"/var_B/P_ETP_hiver.tif"),overwrite=TRUE)
+# writeRaster(rast_PETP_ete, paste0(output_path,"/var_B/P_ETP_ete.tif"),overwrite=TRUE)
+# writeRaster(rast_PETP_hiver, paste0(output_path,"/var_B/P_ETP_hiver.tif"),overwrite=TRUE)
