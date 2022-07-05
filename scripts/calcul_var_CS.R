@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 30-05-2022
+# Dates de modification : 25-06-2022
 
 ### Librairies -------------------------------------
 
@@ -73,13 +73,13 @@ resolution_etude = 25
 
 # Dossier des variables spatiales & chemins des fichiers
 dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Belledonne/"
-# vecteur emrprise carrée
+# vecteur emprise carrée
 path_emprise <- paste0(dos_var_sp ,"/limites_etude/emprise.gpkg")
 path_N2000 <- paste0(dos_var_sp ,"/limites_etude/cembraie_N2000_limites.gpkg")
 # MNT 25m CALé sur le grille de REFERENCE
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 chemin_mnt2 <- paste0(dos_var_sp ,"/Milieux/IGN/MNT_25m_50km_cale.tif")
-path_pente <- paste0(output_path,"/var_CA/pente_25m.tif")
+path_pente <- paste0(output_path,"/var_CA/communs/pente_25m.tif")
 
 # Surface en eaux libres et tronçons rivières IGN
 path_vecteur_eaux_libres <- paste0(output_path,"/var_intermediaire/eaux_libres.gpkg")
@@ -87,6 +87,7 @@ path_vecteur_eaux_libres <- paste0(output_path,"/var_intermediaire/eaux_libres.g
 path_vecteur_infrastructure <- paste0(output_path,"/var_intermediaire/infrastructures.gpkg")
 # Points d'entrée (centroides parking + hauts de 2 remontées mécaniques)
 path_points_entrée <- paste0(output_path,"/var_intermediaire/pts_entree_été.gpkg")
+path_points_entrée_ssRMK <- paste0(output_path,"/var_intermediaire/points_parkings.gpkg")
 
 # Habitats expertisés
 path_raster_habitat <- paste0(output_path,"/var_intermediaire/habitat_raster_25m.tif")
@@ -179,8 +180,6 @@ writeRaster(raster_taille_patch_habitat,
 #     on utilise une couche habitat couvrant une emprise plus large que N2000
 #     --> OCS 2020
 
-###### En été ######
-
 # Lecture des données habitats + table correspondance des vitesses de déplacement
 rast_habitat <- raster(path_raster_habitat_OCS);names(rast_habitat) = "classe"
 table_vitesse_habitat <- fread(tbl_vitesse_OCS_path,dec=",")
@@ -189,6 +188,9 @@ table_vitesse_habitat <- fread(tbl_vitesse_OCS_path,dec=",")
 rast_vitesse <- subs(rast_habitat,table_vitesse_habitat, by = "classe", which = "vitesse")
 rast_sentier <- raster(path_raster_sentier) 
 #plot(rast_sentier, colNA="black")
+
+###### En été ######
+
 # Forcer à passer à 5km.h-1 sur les sentiers
 rast_sentier[rast_sentier==1] <- 5 # valeur de 5km/h
 rast_vitesse_aplat <- mask(rast_vitesse,rast_sentier,inverse=TRUE,updatevalue=5)
@@ -216,6 +218,24 @@ raster_de_calcul <- 1/(raster_de_calcul * (100/6))
 # Calcul matrice de transition
 transition_ete <- transition(raster_de_calcul , function(x) 1/mean(x), 8)
 transition_ete_geocorrigee <- geoCorrection(transition_ete)
+
+###### Par période (mensuel) ######
+
+# Les points d'entrée varient de mai à septembre
+# avec l'ouverture des remontées mécaniques en
+# juillet et août
+
+# temps d'accès pour AVRIL MAI JUIN SEPTEMBRE
+# Accumulations coûts
+coord_entrees <- st_read(path_points_entrée_ssRMK)
+coord_entrees <- as_Spatial(coord_entrees)
+# !!! si les points d'entrée ne sont pas sur le raster, la fonction ne les considère pas
+temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_entrees) # temps en minutes
+plot(temp.raster_ete/60, colNA='black',main="Temps en h")
+writeRaster(temp.raster_ete/60, paste0(output_path,"/var_CS/temps_acces_ssRMK.tif"), overwrite=TRUE)
+
+# temps d'accès pour JUILLET AOUT
+
 # Accumulations coûts
 coord_entrees <- st_read(path_points_entrée)
 coord_entrees <- as_Spatial(coord_entrees)
@@ -223,6 +243,10 @@ coord_entrees <- as_Spatial(coord_entrees)
 temp.raster_ete <- accCost(transition_ete_geocorrigee, coord_entrees) # temps en minutes
 plot(temp.raster_ete/60, colNA='black',main="Temps en h")
 writeRaster(temp.raster_ete/60, paste0(output_path,"/var_CS/temps_acces_ete.tif"), overwrite=TRUE)
+
+###### En hiver ######
+# TODO : se renseigner sur les vitesses en ski de fond, ski de rando, raquettes, vitesse animaux avec la neige
+# La vitesse à plat en hiver (à ski) ne dépend pas de l'habitat ni des chemins. Elle est fixée à 4 km/h (alpiniste.fr)
 
 
 # test_1.tif : sans ajustement, entrée m.min-1, sortie en heures 
