@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 25-06-2022
+# Dates de modification : 11-07-2022
 
 ### Librairies -------------------------------------
 
@@ -113,6 +113,9 @@ tbl_vitesse_path <- paste0(wd,"/input/tables/table_habitats.csv")
 
 # Table correspondance entre habitat OCs et vitesse de déplacement
 tbl_vitesse_OCS_path <- paste0(wd,"/input/tables/table_vitesse_OCS.csv")
+
+# Table de viewshed
+tbl_viewshed_path <- paste0(output_path, "var_intermediaire/viewshed.csv")
 
 ### Programme -------------------------------------
 
@@ -262,8 +265,18 @@ writeRaster(temp.raster_ete/60, paste0(output_path,"/var_CS/temps_acces_ete.tif"
 
 #### Viewshed/ information visuelle ####
 
+table_viewshed = fread(tbl_viewshed_path, drop='V1', dec=',')
 ## VAR : note esthétique moyenne perçue des habitats visibles ##
 ## VAR : sommets visibles depuis le pixel ##
+rast_medVis <- rasterFromXYZ(data.frame(table_viewshed$x, table_viewshed$y, table_viewshed$medVis), crs=EPSG_2154)
+rast_moyVis <- rasterFromXYZ(data.frame(table_viewshed$x, table_viewshed$y, table_viewshed$meanVis), crs=EPSG_2154)
+par(mfrow=c(1,2))
+plot(rast_medVis)
+plot(rast_moyVis)
+
+writeRaster(rast_medVis, paste0(output_path, "/var_CS/communs/visibilite_mediane.tif"))
+writeRaster(rast_moyVis, paste0(output_path, "/var_CS/communs/visibilite_moyenne.tif"))
+
 
 ## VAR : distance à l'eau ##
 eau_vect <- st_read(path_vecteur_eaux_libres)
