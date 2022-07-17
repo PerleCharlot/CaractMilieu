@@ -2,7 +2,7 @@
 # Nom : Regroupement des variables à travers chaque dimension
 # Auteure : Perle Charlot
 # Date de création : 31-03-2022
-# Dates de modification : 07-06-2022
+# Dates de modification : 17-07-2022
 
 ### Librairies -------------------------------------
 
@@ -39,46 +39,62 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
 CreateStackDimSeason <- function(nom_dim){
   
   # # #TEST
-  # nom_dim = "B"
+  # nom_dim = "CS"
   
   nom_dim = as.character(nom_dim)
   
-  liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/"),'.tif$',full.names = TRUE)
-  if(length(liste_rasters) == 0){
-    liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/"),'.TIF$',full.names = TRUE)
-  }
+  # Création d'une stack par mois
+  periode = list.dirs(paste0(output_path,"/var_", nom_dim,"/par_periode//"), recursive = F, full.names = F)
+  for(i in periode){
+    liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/par_periode/",i),'.tif$|.TIF',full.names = TRUE)
+    # S'assurer de la conformité des variables
+    lapply(liste_rasters, AjustExtCRS)
+    stack <- stack(liste_rasters)
+    # Utiliser terra pour garder les noms de chaque variables dans la stack
+    stack <- rast(stack)
     
-  # S'assurer de la conformité des variables
-  lapply(liste_rasters, AjustExtCRS)
-  
-  # Séparer hiver/été si existent
-  r_hiv <- liste_rasters[grep("hiv",liste_rasters)]
-  r_ete <- liste_rasters[grep("ete|été",liste_rasters)]
-  r_both <- liste_rasters[which(!liste_rasters %in% r_hiv & !liste_rasters %in% r_ete)]
-  
-  # Condition  
-  if(!sum(length(r_hiv), length(r_ete), length(r_both)) == length(liste_rasters)){
-    stop("\nProblème entre été et hiver.")
+    noms_vars =paste(names(stack), collapse = "\n- ")
+    cat(paste0("\nLa stack de la variable ", nom_dim," pour le mois de ",i," contient les variables : \n- ",noms_vars))
+    terra::writeRaster(stack,
+                       paste0(output_path,"/stack_dim/",nom_dim,"/",i,"/stack_vars_",nom_dim,"_",i,".tif"),
+                       overwrite=TRUE)
   }
   
-  # Création de la stack par saison
-  stack_hiv <- stack(c(r_hiv, r_both))
-  stack_ete <- stack(c(r_ete, r_both))
-  # Utiliser terra pour garder les noms de chaque variables dans la stack
-  stack_hiv <- rast(stack_hiv)
-  stack_ete <- rast(stack_ete)
-  terra::writeRaster(stack_hiv, 
-                     paste0(output_path,"/stack_dim/",nom_dim,"_hiv.tif"), 
-                     overwrite=TRUE)
-  terra::writeRaster(stack_ete, 
-                     paste0(output_path,"/stack_dim/",nom_dim,"_ete.tif"), 
-                     overwrite=TRUE)
-  
+  # 
+  # liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/"),'.tif$',full.names = TRUE)
+  # if(length(liste_rasters) == 0){
+  #   liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/"),'.TIF$',full.names = TRUE)
+  # }
+  # # S'assurer de la conformité des variables
+  # lapply(liste_rasters, AjustExtCRS)
+  # 
+  # # Séparer hiver/été si existent
+  # r_hiv <- liste_rasters[grep("hiv",liste_rasters)]
+  # r_ete <- liste_rasters[grep("ete|été",liste_rasters)]
+  # r_both <- liste_rasters[which(!liste_rasters %in% r_hiv & !liste_rasters %in% r_ete)]
+  # 
+  # # Condition
+  # if(!sum(length(r_hiv), length(r_ete), length(r_both)) == length(liste_rasters)){
+  #   stop("\nProblème entre été et hiver.")
+  # }
+  # 
+  # # Création de la stack par saison
+  # stack_hiv <- stack(c(r_hiv, r_both))
+  # stack_ete <- stack(c(r_ete, r_both))
+  # # Utiliser terra pour garder les noms de chaque variables dans la stack
+  # stack_hiv <- rast(stack_hiv)
+  # stack_ete <- rast(stack_ete)
+  # terra::writeRaster(stack_hiv,
+  #                    paste0(output_path,"/stack_dim/",nom_dim,"_hiv.tif"),
+  #                    overwrite=TRUE)
+  # terra::writeRaster(stack_ete,
+  #                    paste0(output_path,"/stack_dim/",nom_dim,"_ete.tif"),
+  #                    overwrite=TRUE)
   # # Sauvegarde de la stack par saison par dimension
   # writeRaster(stack_hiv, paste0(output_path,"/stack_dim/",nom_dim,"_hiv.tif"), overwrite=TRUE)
   # writeRaster(stack_ete, paste0(output_path,"/stack_dim/",nom_dim,"_ete.tif"), overwrite=TRUE)
   
-  cat("\nDimension ", nom_dim, "terminée.")
+  cat("\nDimension ", nom_dim, "terminée. \n")
   
 }
 
