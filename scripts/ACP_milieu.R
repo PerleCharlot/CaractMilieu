@@ -11,6 +11,9 @@ library(data.table)
 library(FactoMineR)
 library(factoextra)
 library(patchwork)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
 
 ### Fonctions -------------------------------------
 
@@ -91,7 +94,6 @@ makeFAMD <- function(table_donnees, saison, dimension){
   writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
   
 }
-
 
 # fonction qui fait tout ... 
 fct_FAMD <- function(dimension, periode=c("mai",'juin','juillet','aout','septembre')){
@@ -186,11 +188,10 @@ fct_FAMD_all <- function(periode=c("mai",'juin','juillet','aout','septembre')){
   
   # # # TEST
   # periode = c("mai",'juin','juillet','aout','septembre')
+  # i = periode[1]
   
   # Fonctionnement par période
   for(i in periode){
-    # # TEST
-    # i = periode[1]
     
     dirs_mois = list.dirs(paste0(path_dos_stack))[grep(i, list.dirs(paste0(path_dos_stack)))] 
     stack_mois <- stack(lapply(list.files(dirs_mois,".tif", full.names = T),stack))
@@ -262,6 +263,7 @@ path_dos_stack <- paste0(output_path,"/stack_dim/")
 
 #### Tables ####
 path_table_variables <- paste0(input_path,"/liste_variables.csv")
+path_table_points_multiusage <- "C:/Users/perle.charlot/Documents/PhD/DATA/R_git/CaractUsages/output/multiusage/table_points_multiusage.csv"
 
 ### Programme -------------------------------------
 
@@ -284,7 +286,6 @@ tsne_out <- Rtsne(dt_stack[,1:21],partial_pca=T) # Run TSNE
 # Show the objects in the 2D tsne representation
 plot(tsne_out$Y, asp=0,alpha=0.1)
 
-library(ggplot2)
 DATA = as.data.frame(tsne_out$Y)
 ggplot(DATA, aes(x=V1,y=V2))+
   geom_point(alpha=0.05)
@@ -302,4 +303,105 @@ Factoshiny(dt_stack_ete)
 
 # TODO : dudi.mix par rapport à FAMD ???
 # https://www.rdocumentation.org/packages/ade4/versions/1.7-19/topics/dudi.mix
+
+##### Niche du multiusage ####
+
+# Sur toutes les variables
+liste_tableFAMD_path = list.files(paste0(output_path,"/ACP/toutes/"), recursive = T, full.names = T,'.csv')
+#liste_tableFAMD <- lapply(liste_tableFAMD_path, fread)
+
+
+table_points_multiusage = fread(path_table_points_multiusage, drop="V1")
+tbl_pts_MU = table_points_multiusage %>% pivot_longer(cols=c("sumUsage_04avril",
+                                                "sumUsage_05mai",
+                                                "sumUsage_06juin",
+                                                "sumUsage_07juillet",
+                                                "sumUsage_08aout",  
+                                                "sumUsage_09septembre"),
+                                         values_to = "sumUsage",
+                                         names_to = "mois")
+
+#sub("sumUsage_","",table_points_multiusage$mois)
+
+function(path_table_analyse){
+  
+  # TEST
+  path_table_analyse = liste_tableFAMD_path[2]
+  
+
+  tbl_FAMD <- as.data.frame(fread(path_table_analyse, drop='V1'))
+  tbl_pts_MU <- tbl_pts_MU %>% 
+    subset(mois == paste0("sumUsage_", basename(dirname(path_table_analyse))))
+  tbl_FAMD_MU <- merge(tbl_FAMD, tbl_pts_MU, by=c('x','y'))
+
+  # Graphiques
+  p1 = tbl_FAMD_MU %>% subset(sumUsage > 0) %>%
+    ggplot(aes(axe1, axe2, col=as.factor(sumUsage))) +
+    geom_point(alpha=0.5)+
+    labs(col="Nombre d'usages\nen simultané",
+         x="FAMD_Axe1",y="FAMD_Axe2",
+         title= paste0("Multiusage en dimensions réduites - ",
+                       basename(dirname(path_table_analyse))))+
+    theme(legend.position = "none")
+  p2 = tbl_FAMD_MU %>% subset(sumUsage > 0) %>%
+    ggplot(aes(axe1, axe3, col=as.factor(sumUsage))) +
+    geom_point(alpha=0.5)+
+    labs(col="Nombre d'usages\nen simultané",
+         x="FAMD_Axe1",y="FAMD_Axe3",
+         title= paste0("Multiusage en dimensions réduites - ",
+                       basename(dirname(path_table_analyse))))
+  p3 = tbl_FAMD_MU %>% subset(sumUsage > 0) %>%
+    ggplot(aes(axe2, axe3, col=as.factor(sumUsage))) +
+    geom_point(alpha=0.5)+
+    labs(col="Nombre d'usages\nen simultané",
+         x="FAMD_Axe2",y="FAMD_Axe3",
+         title= paste0("Multiusage en dimensions réduites - ",
+                       basename(dirname(path_table_analyse))))
+  
+  p4 = p1 / p2 / p3
+  p4
+  
+  
+  p5 = tbl_FAMD_MU %>% subset(sumUsage > -1) %>%
+    ggplot(aes(axe1, axe2, col=as.factor(sumUsage))) +
+    geom_point(alpha=0.5)+
+    facet_wrap(~sumUsage)+
+    labs(col="Nombre d'usages\nen simultané",
+         x="FAMD_Axe1",y="FAMD_Axe2",
+         title= paste0("Multiusage en dimensions réduites - ",
+                       basename(dirname(path_table_analyse))))
+  
+
+  
+}
+
+
+# TODO : à tester : avoir sur un graph les variables avec les flèches ACP +
+# en couleur les points des individus multiusage
+
+
+head(tbl_FAMD_MU)
+
+
+c(axe1,axe2,axe3,x,y,mois,sumUsage)
+
+res.famd <- PCA(subset(tbl_FAMD_MU,select=-c(axe1,axe2,axe3,x,y,mois,sumUsage)), 
+                 graph = FALSE, ncp = 3)
+
+fviz_pca_var(res.famd, col.var = "cos2",
+                            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             select.var = list(cos2 = 0.5),
+                            repel = T)
+
+fviz_pca_var(res.famd, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             select.var = list(contrib = 10),
+             repel = T)
+# TROP long ..
+fviz_pca_ind(res.famd, label="none", habillage=tbl_FAMD_MU$sumUsage,
+             addEllipses=TRUE, ellipse.level=0.95,
+             select.ind = list(cos = 5))
+
+
+
 
