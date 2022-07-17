@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension BIOMASSE
 # Auteure : Perle Charlot
 # Date de création : 25-03-2022
-# Dates de modification : 03-07-2022
+# Dates de modification : 06-07-2022
 
 ### Librairies -------------------------------------
 
@@ -10,6 +10,7 @@ library(data.table)
 library(raster)
 library(dplyr)
 library(SPEI)
+library(sen2r)
 
 ### Fonctions --------------------------------------
 
@@ -131,90 +132,57 @@ path_NoP_safran <- paste0(input_path,"/combinaisons_safran.csv")
 # calculé dans script "calcul_var_CA"  dans ** conditions climatiques ***
 
 ## VAR : NDVI ##
-liste_ndvi <- list.files(path_dos_ndvi,".tif$",full.names = TRUE)
-liste_ndvi_été <- liste_ndvi[grep("_ete", liste_ndvi)]
-liste_ndvi_hiv <- liste_ndvi[grep("_hiv", liste_ndvi)]
+# liste_ndvi <- list.files(path_dos_ndvi,".tif$",full.names = TRUE)
+# liste_ndvi_été <- liste_ndvi[grep("_ete", liste_ndvi)]
+# liste_ndvi_hiv <- liste_ndvi[grep("_hiv", liste_ndvi)]
+# 
+# stack_ndvi_hiv <- stack(liste_ndvi_hiv)
+# stack_ndvi_ete <- stack(liste_ndvi_été)
+# 
+# # Moyenne sur les X années
+# rast_ndvi_mean_été <- calc(stack_ndvi_ete, mean)
+# rast_ndvi_mean_hiv <- calc(stack_ndvi_hiv, mean)
+# plot(rast_ndvi_mean_hiv, colNA='black')
+# 
+# # recaler sur raster de ref
+# rast_ref <- raster(chemin_mnt)
+# rast_ndvi_mean_été <- projectRaster(rast_ndvi_mean_été,rast_ref)
+# rast_ndvi_mean_été_cale <- resample(rast_ndvi_mean_été, rast_ref)
+# rast_ndvi_mean_hiv <- projectRaster(rast_ndvi_mean_hiv,rast_ref)
+# rast_ndvi_mean_hiv_cale <- resample(rast_ndvi_mean_hiv, rast_ref)
+# 
+# # crop à l'emprise
+# emprise <- st_read(path_emprise)
+# rast_ndvi_mean_été_cale_crop <- raster::crop(rast_ndvi_mean_été_cale,emprise)
+# rast_ndvi_mean_hiv_cale_crop <- raster::crop(rast_ndvi_mean_hiv_cale,emprise)
+# 
+# par(mfrow=c(1,2))
+# plot(rast_ndvi_mean_été_cale_crop, main="NDVI été")
+# plot(rast_ndvi_mean_hiv_cale_crop, main ="NDVI hiver")
+# 
+# writeRaster(rast_ndvi_mean_été_cale_crop, paste0(output_path,"/var_B/NDVI_été.tif"))
+# writeRaster(rast_ndvi_mean_hiv_cale_crop, paste0(output_path,"/var_B/NDVI_hiv.tif"))
 
-stack_ndvi_hiv <- stack(liste_ndvi_hiv)
-stack_ndvi_ete <- stack(liste_ndvi_été)
-
-# Moyenne sur les X années
-rast_ndvi_mean_été <- calc(stack_ndvi_ete, mean)
-rast_ndvi_mean_hiv <- calc(stack_ndvi_hiv, mean)
-plot(rast_ndvi_mean_hiv, colNA='black')
-
-# recaler sur raster de ref
-rast_ref <- raster(chemin_mnt)
-rast_ndvi_mean_été <- projectRaster(rast_ndvi_mean_été,rast_ref)
-rast_ndvi_mean_été_cale <- resample(rast_ndvi_mean_été, rast_ref)
-rast_ndvi_mean_hiv <- projectRaster(rast_ndvi_mean_hiv,rast_ref)
-rast_ndvi_mean_hiv_cale <- resample(rast_ndvi_mean_hiv, rast_ref)
-
-# crop à l'emprise
-emprise <- st_read(path_emprise)
-rast_ndvi_mean_été_cale_crop <- raster::crop(rast_ndvi_mean_été_cale,emprise)
-rast_ndvi_mean_hiv_cale_crop <- raster::crop(rast_ndvi_mean_hiv_cale,emprise)
-
-par(mfrow=c(1,2))
-plot(rast_ndvi_mean_été_cale_crop, main="NDVI été")
-plot(rast_ndvi_mean_hiv_cale_crop, main ="NDVI hiver")
-
-writeRaster(rast_ndvi_mean_été_cale_crop, paste0(output_path,"/var_B/NDVI_été.tif"))
-writeRaster(rast_ndvi_mean_hiv_cale_crop, paste0(output_path,"/var_B/NDVI_hiv.tif"))
-
-library(sen2r)
+# 2017 : complet
 sen2r()
-safe_is_online("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/lta_orders/lta_20220704_203729.json")
-
-# Toutes les images de 2017 : OK
-
-# 2018 (il en reste 12)
-sen2r()
-#You can check later if the ordered images are with the command:
-safe_is_online("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/lta_orders/lta_20220704_221317.json")
-#When additional images are online, you can relaunch the processing chain using the command:
-sen2r("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/proc_par/s2proc_20220704_221021.json")
-
-# 2019
-sen2r()
-#You can check later if the ordered images are with the command:
-safe_is_online("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/lta_orders/lta_20220705_093647.json")
-#When additional images are online, you can relaunch the processing chain using the command:
-sen2r("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/proc_par/s2proc_20220705_093251.json")
-
-# 2020
-sen2r()
-safe_is_online("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/lta_orders/lta_20220705_102301.json")
-#When additional images are online, you can relaunch the processing chain using the command:
-sen2r("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/proc_par/s2proc_20220705_101945.json")
-
-# 2021
-sen2r()
-#You can check later if the ordered images are online with the command:
-safe_is_online("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/lta_orders/lta_20220705_104748.json")
-#When additional images are online, you can relaunch the processing chain using the command:
-sen2r("C:/Users/PERLE~1.CHA/DOCUME~1/SEN2R~1/proc_par/s2proc_20220705_104516.json")
-
-time_window <- as.Date(c("2017-04-01", "2021-09-30")) # sur 5 ans
-
-list_avril2 = s2_list(tile="31TGL",
-        time_interval = time_window,
-        time_period = "seasonal",
-        level="L2A",
-        max_cloud=75)
+# 2018 : complet
+# 2019 : complet
+# 2020 : complet 
+# 2021 : complet
 
 
-s2_download(s2_prodlist = list_avril2,
-            outdir = paste0(dos_var_sp,"/test_avril_s2"),
-            apihub =)
+# moyenne des NDVI par mois (avril à septembre) sur 5 ans
+mois = c("04_avril",'05_mai','06_juin','07_juillet','08_aout','09_septembre')
 
-?write_scihub_login
+for(i in mois){
 
-# TODO : faire la moyenne des NDVI par mois (avril à septembre)
-B4 <- list.files(paste0(dos_var_sp,"/Milieux/sen2r/"),
-                   recursive = TRUE,'B04_10m.jp2')
-B8 <- list.files(paste0(dos_var_sp,"/Milieux/sen2r/"),
-                 recursive = TRUE,'B08_10m.jp2')
+  ndvi_mois <- list.files(paste0(dos_var_sp,"/Milieux/sen2r/par_periode/", i), '.tif',full.names = T)
+  stack_ndiv_mois <- stack(ndvi_mois)
+  stack_ndiv_mois <- stack_ndiv_mois/10000 #pour remettre entre -1 et 1
+  rast_mean_ndiv_mois <- calc(stack_ndiv_mois, mean, na.rm=T) 
+  writeRaster(rast_mean_ndiv_mois, paste0(output_path,"/var_B/NDVI_",i,".tif"))
+  
+}
 
 
 ## VAR : Bois sur pied ##
