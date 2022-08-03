@@ -2,7 +2,7 @@
 # Nom : ACP du milieu 
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 17-07-2022
+# Dates de modification : 03-08-2022
 
 ### Librairies -------------------------------------
 
@@ -34,19 +34,63 @@ makeFAMD <- function(table_donnees, saison, dimension){
     res.famd <- FAMD(tbl_data , graph = FALSE, ncp = 3)}
   
   # % variance expliquée par axe
-  graph_var_expl <- fviz_screeplot(res.famd, main ="éboulis des valeurs")
+  liste_variance_expl = round(res.famd$eig[,2],1)
+  if(length(liste_variance_expl)>2){
+    graph_var_expl <- fviz_eig(res.famd,
+                               choice=c("variance"),
+                               geom=c("bar"),
+                               xlab="Axe",
+                               ncp=3,
+                               addlabels=F,main=' ',
+                               font.x=c(24,"plain","black"),
+                               font.y=c(28,"plain","black"),
+                               font.tickslab = c(24,"plain","black")
+    )  + geom_text(size = 15,label = liste_variance_expl[1:3])
+  } else {
+    graph_var_expl <- fviz_eig(res.famd,
+                               choice=c("variance"),
+                               geom=c("bar"),
+                               xlab="Axe",
+                               ncp=2,
+                               addlabels=F,main=' ',
+                               font.x=c(24,"plain","black"),
+                               font.y=c(28,"plain","black"),
+                               font.tickslab = c(24,"plain","black")
+    )  + geom_text(size = 15,label = liste_variance_expl[1:2])
+  }
+  
   # Graphique des variables
   options(ggrepel.max.overlaps = Inf)
   graph_var <- fviz_famd_var(res.famd, "var", col.var = "cos2",
                              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                             font.x=c(24,"plain","black"),
+                             font.y=c(24,"plain","black"),
+                             font.tickslab = c(24,"plain","black"),
+                             labelsize=10,
                              repel = TRUE)
   # fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
   #               gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
   #               repel = FALSE)
   
   # Contribution aux axes 1 et 2, par variable
-  graph_contrib_var_axe1 <- fviz_contrib(res.famd, "var", axes = 1)
-  graph_contrib_var_axe2 <- fviz_contrib(res.famd, "var", axes = 2)
+  graph_contrib_var_axe1 <- fviz_contrib(res.famd, "var", 
+                                         axes = 1,
+                                         title='',
+                                         font.y=c(24,"plain","black"),
+                                         font.tickslab = c(28,"plain","black"))
+  graph_contrib_var_axe2 <- fviz_contrib(res.famd, "var", 
+                                         axes = 2,
+                                         title='',
+                                         font.y=c(24,"plain","black"),
+                                         font.tickslab = c(28,"plain","black"))
+  if(length(liste_variance_expl)>2){
+    graph_contrib_var_axe3 <- fviz_contrib(res.famd, "var", 
+                                           axes = 3,
+                                           title='',
+                                           font.y=c(24,"plain","black"),
+                                           font.tickslab = c(28,"plain","black"))
+  }
+
   # Graphique des individus
   
   t2 = try(fviz_famd_ind(res.famd,  alpha.ind = 0.05,
@@ -54,10 +98,18 @@ makeFAMD <- function(table_donnees, saison, dimension){
                          repel = FALSE))
   if(inherits(t2, "try-error")) {
     graph_ind <- fviz_pca_ind(res.famd,  alpha.ind = 0.05,
+                              title=' ',
                               geom=c("point"),
+                              font.x=c(28,"plain","black"),
+                              font.y=c(28,"plain","black"),
+                              font.tickslab = c(28,"plain","black"),
                               repel = FALSE)
   } else{  
     graph_ind <- fviz_famd_ind(res.famd,  alpha.ind = 0.05,
+                               title=' ',
+                               font.x=c(28,"plain","black"),
+                               font.y=c(28,"plain","black"),
+                               font.tickslab = c(28,"plain","black"),
                                geom=c("point"),
                                repel = FALSE)}
   
@@ -79,6 +131,39 @@ makeFAMD <- function(table_donnees, saison, dimension){
   print(p7)
   dev.off()
   
+  # Pour rmd, sauvegarde plots seuls
+  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd"))){
+    dir.create(paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd"))}
+    
+  png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/graph_var_",dimension,"_",saison,".png"), 
+      width=1000, height=800)
+  print(p5)
+  dev.off()
+  png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/graph_ind_",dimension,"_",saison,".png"), 
+      width=1000, height=800)
+  print(p6)
+  dev.off()
+  
+  png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/contrib_axe1_",dimension,"_",saison,".png"), 
+      width=1000, height=800)
+  print(graph_contrib_var_axe1)
+  dev.off()
+  png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/contrib_axe2_",dimension,"_",saison,".png"), 
+      width=1000, height=800)
+  print(graph_contrib_var_axe2)
+  dev.off()
+  if(length(liste_variance_expl)>2){
+    png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/contrib_axe3_",dimension,"_",saison,".png"), 
+        width=1000, height=800)
+    print(graph_contrib_var_axe3)
+    dev.off()
+  }
+  
+  png(file=paste0(output_path,"/ACP/",dimension,"/",saison,"/plot_rmd/eboulis_variance_",dimension,"_",saison,".png"), 
+      width=1000, height=800)
+  print(graph_var_expl)
+  dev.off()
+  
   # valeurs des axes, par pixels
   # FAMD_tbl <-as.data.frame(res.famd$svd$U)
   FAMD_tbl <-as.data.frame(res.famd$ind$coord)
@@ -88,24 +173,25 @@ makeFAMD <- function(table_donnees, saison, dimension){
   # Création des rasters des axes 1, 2 et 3 de la FAMD
   rast_axe1 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe1))
   rast_axe2 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe2))
-  rast_axe3 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe3))
+  if(length(liste_variance_expl)>2){
+    rast_axe3 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe3))
+    writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
+  }
   writeRaster(rast_axe1, paste0(output_path,"/ACP/",dimension,"/",saison,"/axe1_",dimension,"_",saison,".tif"), overwrite=T)
   writeRaster(rast_axe2, paste0(output_path,"/ACP/",dimension,"/",saison,"/axe2_",dimension,"_",saison,".tif"), overwrite=T)
-  writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
-  
 }
 
 # fonction qui fait tout ... 
 fct_FAMD <- function(dimension, periode=c("mai",'juin','juillet','aout','septembre')){
   
-  # # TEST
-  dimension = liste.dim[1]
-  periode = c("mai",'juin','juillet','aout','septembre')
+  # # # TEST
+  # dimension = liste.dim[5]
+  # periode = c("mai",'juin','juillet','aout','septembre')
   
   # Fonctionnement par période
   for(i in periode){
-    # TEST
-    i = periode[1]
+    # # # TEST
+    # i = periode[1]
      
     stack_dim <- stack(list.files(paste0(path_dos_stack,dimension,"/",i),".tif", full.names = T))
     # Transformation en table
@@ -150,8 +236,6 @@ fct_FAMD <- function(dimension, periode=c("mai",'juin','juillet','aout','septemb
     # str(dt_stack)
     
     makeFAMD(dt_stack,i, dimension)
-    
-    #
   }
   
   # # Chargement d'une stack d'une dimension pour une saison
@@ -189,7 +273,7 @@ fct_FAMD_all <- function(periode=c("mai",'juin','juillet','aout','septembre')){
   # # # TEST
   # periode = c("mai",'juin','juillet','aout','septembre')
   # i = periode[1]
-  
+  # 
   # Fonctionnement par période
   for(i in periode){
     
@@ -273,8 +357,11 @@ table_variables <- fread(path_table_variables)
 
 lapply(liste.dim, fct_FAMD)
 
+
 ##### FAMD sur toutes les dimensions simultanément, par saison ####
 fct_FAMD_all()
+
+# TODO : refaire tourner en sortant les contrib des vars de l'axe 3 pour mettre dans rmd
 
 ##### t-SNE par dimension par saison ####
 library(Rtsne)
@@ -401,7 +488,6 @@ fviz_pca_var(res.famd, col.var = "cos2",
 fviz_pca_ind(res.famd, label="none", habillage=tbl_FAMD_MU$sumUsage,
              addEllipses=TRUE, ellipse.level=0.95,
              select.ind = list(cos = 5))
-
 
 
 
