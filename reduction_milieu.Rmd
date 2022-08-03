@@ -1,0 +1,486 @@
+---
+title: "Réduction des variables du milieu"
+author: "Perle Charlot"
+date: "01/08/2022"
+output: html_document
+---
+
+
+<style type="text/css">
+.main-container {
+  max-width: 100% !important;
+  margin: auto;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+
+# Espace de travail
+wd <- getwd()
+# Liste dimensions
+liste.dim=  c("CA","B","PV","CS","D","I")
+
+input_path <- paste0(wd,"/input/")
+path_table_variables <- paste0(input_path,"/liste_variables.csv")
+
+library(rmarkdown)
+library(knitr)
+library(data.table)
+library(dplyr)
+
+```
+
+
+# Analyse factorielle par dimension {.tabset}
+
+On utilise des **AFDM** (**Analyse Factorielle des Données Mixtes**, ou FAMD Factor Analysis for Mixed Data en anglais) pour traiter notre jeu de données car il contient des variables quantitatives et qualitatives. L'AFDM procède de la même manière qu'une ACP (Analyse en Composantes Principales) sur les variables quantitatives, et performe une ACM (Analyses des Correspondances Multiples) sur les variables qualitatives.
+
+## **Conditions Abiotiques**
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[1]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+``` 
+
+
+## **Biomasse**
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[2]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+``` 
+
+## **Physionomie de Végétation**
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[3]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+```
+## **Contexte Spatial**
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[4]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+```
+## **Dynamique**
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[5]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+```
+## **Infrastructures**
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+dimension = liste.dim[6]
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_ind",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+Distribution des variables sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>% 
+  subset(Dimension == dimension) 
+
+kable(table_output)
+
+```
+
+# Analyse factorielle sur toutes les variables (sans considérer les dimensions)  {.tabset}
+
