@@ -202,7 +202,7 @@ writeRaster(rast_eau, file= paste0(output_path,"/var_CS/eaux_libres.TIF"))
 # Chargement des vecteurs de tronçons et surface en eau (issu BD TOPO IGN)
 vect_sentier <- st_read(sentier_path)
 vect_sentier <- st_zm(vect_sentier)
-vect_sentier <- buffer(as_Spatial(vect_sentier), 10) 
+vect_sentier <- buffer(as_Spatial(vect_sentier), 10)
 vect_sentier <- st_cast(st_as_sf(vect_sentier), "POLYGON")
 rast_ref <- raster(chemin_mnt)
 rast_sentier <- fasterize(vect_sentier,rast_ref)
@@ -217,7 +217,7 @@ st_write(point_parking, paste0(output_path,"/var_intermediaire/points_parkings.g
 # les parkings sont-ils autant valides en été et en hiver ?
 
 # inclusion des remontées mécaniques :
-#  - point haut du télécabine de la Croix (ouvert weekends de juin + juillet + août + weeknds de septembre)
+#  - point haut du télécabine de la Croix (ouvert weekends de juin + juillet + août + weekends de septembre)
 #     --> départ randonnées pédestre + VTT en été
 #     point d'entrée en hiver pour ski de rando (et alpin)
 #  - point haut télésiège Bachat-Bouloud : VTT + randonnée pédestre (ouvert juillet - aout)
