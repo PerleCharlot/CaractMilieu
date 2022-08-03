@@ -44,6 +44,14 @@ vignettes/*.pdf
 # dossiers des inputs et des outputs
 input/
 output/
+output_sauvegarde/
+analyse_eboulis/
 
 # tableurs excels
 *.xlsx
+
+# Images
+*.png
+
+# Projet
+*.Rproj
