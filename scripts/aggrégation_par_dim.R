@@ -2,7 +2,7 @@
 # Nom : Regroupement des variables à travers chaque dimension
 # Auteure : Perle Charlot
 # Date de création : 31-03-2022
-# Dates de modification : 17-07-2022
+# Dates de modification : 09-08-2022
 
 ### Librairies -------------------------------------
 
@@ -36,25 +36,39 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
 }
 
 # Fonction qui crée une stack de variables par dimension et par saison
-CreateStackDimSeason <- function(nom_dim){
-  
+CreateStackDimSeason <- function(nom_dim, periode=c("mai","juin","juillet","aout","septembre")){
   # # #TEST
-  # nom_dim = "CS"
-  
+  # nom_dim = "CA"
+  cat(paste0("\nDimension ",nom_dim, " en cours."))
   nom_dim = as.character(nom_dim)
-  
-  # Création d'une stack par mois
-  periode = list.dirs(paste0(output_path,"/var_", nom_dim,"/par_periode//"), recursive = F, full.names = F)
+  # 
+  # # Création d'une stack par mois
+  # periode = list.dirs(paste0(output_path,"/var_", nom_dim,"/par_periode//"), recursive = F, full.names = F)
   for(i in periode){
+    cat(paste0("\nMois ",i, " en cours."))
     liste_rasters <- list.files(paste0(output_path,"/var_",nom_dim,"/par_periode/",i),'.tif$|.TIF',full.names = TRUE)
     # S'assurer de la conformité des variables
     lapply(liste_rasters, AjustExtCRS)
+    
     stack <- stack(liste_rasters)
+    
+    # Utiliser ACP1_clim au lieu des 10 variables climatiques
+    if(nom_dim == "CA"){
+      var_a_retirer = c("htNeigmean","nbJgel","nbJneb10","nbJneb90","nbJssdegel","rain0","t10","t90","wind10","wind90")
+      stack = dropLayer(stack,which(names(stack) %in% var_a_retirer))
+
+      stack_ACPclimat = stack(list.files(paste0(output_path,"/var_",nom_dim,"/par_periode/",i,"/ACP_climat/"), full.names = T, ".tif"))
+      stack = stack(stack, stack_ACPclimat)
+    }
+    
     # Utiliser terra pour garder les noms de chaque variables dans la stack
     stack <- rast(stack)
     
-    noms_vars =paste(names(stack), collapse = "\n- ")
+    noms_vars = paste(names(stack), collapse = "\n- ")
     cat(paste0("\nLa stack de la variable ", nom_dim," pour le mois de ",i," contient les variables : \n- ",noms_vars))
+    # terra::writeRaster(stack,
+    #                    paste0(output_path,"/stack_dim/",nom_dim,"/",i,"/stack_vars_",nom_dim,"_",i,"_sansACP.tif"),
+    #                    overwrite=TRUE)
     terra::writeRaster(stack,
                        paste0(output_path,"/stack_dim/",nom_dim,"/",i,"/stack_vars_",nom_dim,"_",i,".tif"),
                        overwrite=TRUE)
@@ -119,8 +133,14 @@ dos_var_sp <- "C:/Users/perle.charlot/Documents/PhD/DATA/Variables_spatiales_Bel
 chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
 #### Tables ####
+path_table_variables <- paste0(input_path,"/liste_variables.csv")
 
 ### Programme -------------------------------------
 
+table_variables <- fread(path_table_variables)
+
 # Stack des variables par dimension et par saison
 lapply(liste_dimensions,CreateStackDimSeason)
+
+# # # # Refaire la stack de CA en gardant toutes les vars
+# CreateStackDimSeason("CS")
