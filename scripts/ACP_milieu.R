@@ -248,7 +248,10 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
     names(rast_axe3) = paste0("axe3_",dimension,"_",saison)
     rast_axe3 = ExtCRS(rast_axe3)
     writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
-  }
+    # sauvegarde brick pour visualiser en multiband sur QGIS
+    writeRaster(stack(rast_axe1,rast_axe2,rast_axe3), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)
+  }else{# sauvegarde brick pour visualiser en multiband sur QGIS
+    writeRaster(stack(rast_axe1,rast_axe2), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)}
   }
 
 # fonction qui fait tout ... 
