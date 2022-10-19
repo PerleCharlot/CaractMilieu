@@ -25,6 +25,8 @@ ACP_varclim <- function(mois){
   
   PCA_var_clim = rasterPCA(stack_vars_clim, spca=TRUE, nComp=2)
   
+  print(loadings(PCA_var_clim$model))
+  
   print(summary(PCA_var_clim$model))
   # Se limiter à 2 axes (min 87% | max 97% variance cumulée expliquée)
   if(!dir.exists(paste0(output_path,"/var_CA/par_periode/",mois,"/ACP_climat/"))){
