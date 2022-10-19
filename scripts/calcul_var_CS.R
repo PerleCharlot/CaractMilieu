@@ -2,7 +2,7 @@
 # Nom : Calcul des variables de la dimension CONTEXTE SPATIAL
 # Auteure : Perle Charlot
 # Date de création : 01-03-2022
-# Dates de modification : 11-07-2022
+# Dates de modification : 09-08-2022
 
 ### Librairies -------------------------------------
 
@@ -271,12 +271,13 @@ table_viewshed = fread(tbl_viewshed_path, drop='V1', dec=',')
 rast_medVis <- rasterFromXYZ(data.frame(table_viewshed$x, table_viewshed$y, table_viewshed$medVis), crs=EPSG_2154)
 rast_moyVis <- rasterFromXYZ(data.frame(table_viewshed$x, table_viewshed$y, table_viewshed$meanVis), crs=EPSG_2154)
 par(mfrow=c(1,2))
-plot(rast_medVis)
-plot(rast_moyVis)
-
-writeRaster(rast_medVis, paste0(output_path, "/var_CS/communs/visibilite_mediane.tif"))
-writeRaster(rast_moyVis, paste0(output_path, "/var_CS/communs/visibilite_moyenne.tif"))
-
+plot(rast_medVis, colNA='black')
+plot(rast_moyVis, colNA='black')
+# remplacer les NA par 0 (visibilité nulle)
+rast_medVis[is.na(rast_medVis)] = 0
+rast_moyVis[is.na(rast_moyVis)] = 0
+writeRaster(rast_medVis, paste0(output_path, "/var_CS/communs/visibilite_mediane.tif"), overwrite=T)
+writeRaster(rast_moyVis, paste0(output_path, "/var_CS/communs/visibilite_moyenne.tif"), overwrite=T)
 
 ## VAR : distance à l'eau ##
 eau_vect <- st_read(path_vecteur_eaux_libres)
