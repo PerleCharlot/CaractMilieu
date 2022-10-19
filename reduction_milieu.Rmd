@@ -64,7 +64,7 @@ Cette dimension décrit les conditions abiotiques, donc les caractéristiques as
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
 dimension = liste.dim[1]
-tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/sans_ACP_clim/"), full.names = T)
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T)
 # exclure ACP
 # tout <- tout[-grep("avec_ACP_clim",tout)]
 table_variables <- fread(path_table_variables, header=T)
@@ -130,88 +130,10 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
-Tableau récapitulatif des variables utilisée dans la dimension :
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-table_output <- table_variables %>% 
-  subset(Dimension == dimension) 
 
-kable(table_output)
-
-``` 
-
-
-
-## **Conditions Abiotiques avec ACP sur variables climatiques**
-
-Cette dimension décrit les conditions abiotiques, donc les caractéristiques associées au pixel qui ne sont pas dépendantes des êtres vivants. Elle est déclinée en 3 catégories : le climat, la topographie et l'hydrologie.
-
-Les variables climatiques, très corrélées entre elles, ont été réduites en 2 variables via une ACP.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-dimension = liste.dim[1]
-tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/avec_ACP_clim/"), full.names = T)
-table_variables <- fread(path_table_variables, header=T)
-``` 
-
-
-|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
-|----|----|----|----|----|
-|` `|` `|` `|` `|` `|
-
-Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables).
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-eboulis = tout[grep("eboulis_variance",tout)]
-
-include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
-                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
-                   eboulis[grep("septembre",eboulis)]))
-``` 
-
-Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-C1 = tout[grep("contrib_axe1",tout)]
-include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
-                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
-                   C1[grep("septembre",C1)]))
-``` 
-
-Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-C2 = tout[grep("contrib_axe2",tout)]
-include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
-                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
-                   C2[grep("septembre",C2)]))
-``` 
-
-Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-C3 = tout[grep("contrib_axe3",tout)]
-include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
-                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
-                   C3[grep("septembre",C3)]))
-``` 
-
-Distribution des pixels sur l'axe 1 et l'axe 2.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DI = tout[grep("graph_ind",tout)]
-include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
-                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
-                   DI[grep("septembre",DI)]))
-``` 
-
-Distribution des variables sur l'axe 1 et l'axe 2.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
-include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
-                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
-                   DV[grep("septembre",DV)]))
-``` 
+Interprétation des axes :
+- l'axe 1 est décrit par les variables climatiques (vent, nébulosité, pluie, gel, hauteur de neige, température) qui sont corrélés positivement à cet axe. C'est-à-dire que cet axe représente des pixels aux températures chaudes (t90 et t10), secs (rain0), ventés (wind90 et wind10), enneigés (htNeigemean). On peut ici y lire un effet de l'altitude : 
+- l'axe 2 est décrit par des variables topographiques (pente et relief). Diversité plus grande et pente plus grande
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -221,6 +143,89 @@ table_output <- table_variables %>%
 kable(table_output)
 
 ``` 
+
+
+
+<!-- ## **Conditions Abiotiques avec ACP sur variables climatiques** -->
+
+<!-- Cette dimension décrit les conditions abiotiques, donc les caractéristiques associées au pixel qui ne sont pas dépendantes des êtres vivants. Elle est déclinée en 3 catégories : le climat, la topographie et l'hydrologie. -->
+
+<!-- Les variables climatiques, très corrélées entre elles, ont été réduites en 2 variables via une ACP. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- dimension = liste.dim[1] -->
+<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/avec_ACP_clim/"), full.names = T) -->
+<!-- table_variables <- fread(path_table_variables, header=T) -->
+<!-- ```  -->
+
+
+<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
+<!-- |----|----|----|----|----| -->
+<!-- |` `|` `|` `|` `|` `| -->
+
+<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
+
+<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
+<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
+<!--                    eboulis[grep("septembre",eboulis)])) -->
+<!-- ```  -->
+
+<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- C1 = tout[grep("contrib_axe1",tout)] -->
+<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
+<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
+<!--                    C1[grep("septembre",C1)])) -->
+<!-- ```  -->
+
+<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- C2 = tout[grep("contrib_axe2",tout)] -->
+<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
+<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
+<!--                    C2[grep("septembre",C2)])) -->
+<!-- ```  -->
+
+<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- C3 = tout[grep("contrib_axe3",tout)] -->
+<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
+<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
+<!--                    C3[grep("septembre",C3)])) -->
+<!-- ```  -->
+
+<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DI = tout[grep("graph_ind",tout)] -->
+<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
+<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
+<!--                    DI[grep("septembre",DI)])) -->
+<!-- ```  -->
+
+<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
+
+<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- table_output <- table_variables %>%  -->
+<!--   subset(Dimension == dimension)  -->
+
+<!-- kable(table_output) -->
+
+<!-- ```  -->
 
 
 
