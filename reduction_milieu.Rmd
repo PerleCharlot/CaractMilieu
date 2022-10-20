@@ -141,10 +141,17 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
 
 Interprétation des axes pour les variables quantitatives :  
 
-* Axe 1
-* Axe 2
-    + Item 2a
-    + Item 2b
+* Axe 1 : décrit par les variables climatiques. 
+Il représente des pixels aux températures basses, avec peu de nébulosité, ventés, enneigés, secs et gelés . On peut ici y lire un effet de l'altitude : ces caractéristiques sont liées à une augmentation de l'altitude.
+Cette hypothèse est vérifiée par la visualisation cartographique de l'axe 1 : ce sont bien des pixels d'altitude qui ont les valeurs les plus élevées (valeur dans l'axe d'ACP).
+* Axe 2 : décrit par les variables topographiques.
+Il représente des pixels pentus, avec une diversité de reliefs élevée, ESATING POSITIF = ?? face est ou ouest ?
+avec un potentiel hydrique faible et peu de rayonnement. Ici, le contraste se fait donc plus sur l'inclinaison du terrain, ce qui est confirmé visualisation cartographique (valeurs faibles pour les zones plates et élevées pour les crêtes).
+* Axe 3 : rayonnement + et pente nord/sud - (vérifier à quoi ça correspond, mais intuition que c'est sud). On a donc un effet thermique; l'axe représente des pixels un peu plus chauds.
+
+Variation au cours du temps :  
+Durant les mois de juin, juillet et août, quelques variables climatiques prennent du poids dans l'axe 2 : neige, gel et pluie, qui sont corrélés négativement. Cela correspond à des pixels d'altitude élevée. A COGITER
+Axe 3 : corrélation northing et rayonnement s'inversent en juillet/août (devient + et -, respectivement). ?? A COGITER
 
 Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2.
 
@@ -164,16 +171,18 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
+Interprétation des axes pour les variables qualitatives : 
 
-Interprétation des axes :  
+* Axe 1 : corrélé + = landform 10, 7 et 3; corrélé - = landform 8, 4 et 1. A REGARDER
+* Axe 2 : corrélé + = landform 8; corrélé - = présence d'eau,landform 5.
+* Axe 3 : corrélé + = landform 5 + présence eau; corrélé - = landform 10
 
-* l'axe 1 est décrit par les variables climatiques (vent, nébulosité, pluie, gel, hauteur de neige, température) qui sont corrélés positivement à cet axe. C'est-à-dire que cet axe représente des pixels aux températures chaudes (t90 et t10), secs (rain0), ventés (wind90 et wind10), enneigés (htNeigemean). On peut ici y lire un effet de l'altitude.
-* l'axe 2 est décrit par des variables topographiques (pente et relief). Diversité plus grande et pente plus grande.
+Variation au cours du temps :  
+Inversion sur l'axe 3 en juillet + août.
 
-* Item 1
-* Item 2
-    + Item 2a
-    + Item 2b
+Synthèse quanti + quali :  
+TODO
+
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -183,8 +192,6 @@ table_output <- table_variables %>%
 kable(table_output)
 
 ``` 
-
-
 
 <!-- ## **Conditions Abiotiques avec ACP sur variables climatiques** -->
 
@@ -365,8 +372,17 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
 ``` 
 
 
-Interprétation des axes :
+Interprétation des axes :  
 
+* Axe 1 : Cela correspond à des pixels productifs en végétation (bilan hydrique fort et biomasse abondante), donc aux forêts d'altitude plus basse.
+* Axe 2 : + = abondance feuillage 3; - = feuillage 0. Avec la carto on dirait que ce sont les patchs de landes qui ressortent (forêt et hautes altitudes ont des valeurs faibles).
+* Axe 3 : inverse de axe 2.
+
+Variation au cours du temps :  
+* Axe 1 : inversion en juillet et août du bilan hydrique, qui devient corrélé négativement. Sur la visualisation carto, on remarque que les valeurs élevées dans l'axe ne persistent que dans les altitudes les plus basses  --> plus basses donc plus sèches ?
+
+Conclusion :
+Ne garder que les 2 premiers axes.
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -444,6 +460,14 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
+Interprétation des axes pour les variables quantitatives :  
+
+* Axe 1 : 
+* Axe 2 : 
+* Axe 3 : 
+
+Variation au cours du temps : 
+
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
 table_output <- table_variables %>% 
@@ -511,7 +535,7 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_",tout)]
+DV = tout[grep("graph_var_CS",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
@@ -526,6 +550,14 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
+Interprétation des axes :  
+
+* Axe 1 : pixels d'habitats similaires à leurs voisins, appartenant à de grands patchs, avec une visibilité faible --> milieux forestiers + falaises nord lac doménon. 
+* Axe 2 : pixels éloignés des points d'entrée, des infrastructures et des forêts. Donc plutôt la partie est de la zone.
+* Axe 3 : éloignés des lacs et rivières, avec une visibilité moyenne mais moyennement proche des infrastructures.
+
+Variation au cours du temps : 
+Aucune modification significative au cours du temps.
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -595,7 +627,7 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 Distribution des variables sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_",tout)]
+DV = tout[grep("graph_var_D",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
@@ -610,6 +642,13 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
+Interprétation des axes pour les variables :  
+
+* Axe 1 : 
+* Axe 2 : 
+* Axe 3 : 
+
+Variation au cours du temps : 
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -680,7 +719,7 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 Distribution des variables sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_",tout)]
+DV = tout[grep("graph_var_I",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
@@ -704,6 +743,18 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
+
+Interprétation des axes :  
+
+* Axe 1 : + degré artif 1 et 3, % infrastructure. Pixels artificialisés par des infrastructures (remontées mécaniques, refuge).
+* Axe 2 : + degré interdiction 2 ; - degré artif 2. Pixels de zones protégées (CEN).
+* Axe 3 : + degré artif 3. Ne discrimine quasiment rien.
+
+Variation au cours du temps :  
+Absence de variation.
+
+Synthèse :  
+Ne conserver que les 2 premiers axes.
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
