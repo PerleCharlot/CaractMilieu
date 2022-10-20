@@ -121,19 +121,59 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
                    DI[grep("septembre",DI)]))
 ``` 
 
-Distribution des variables sur l'axe 1 et l'axe 2.
+Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
+DV = tout[grep("graph_var_quanti_axes1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quanti_axes2_3",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Interprétation des axes pour les variables quantitatives :  
+
+* Axe 1
+* Axe 2
+    + Item 2a
+    + Item 2b
+
+Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes2_3",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
 
-Interprétation des axes :
-- l'axe 1 est décrit par les variables climatiques (vent, nébulosité, pluie, gel, hauteur de neige, température) qui sont corrélés positivement à cet axe. C'est-à-dire que cet axe représente des pixels aux températures chaudes (t90 et t10), secs (rain0), ventés (wind90 et wind10), enneigés (htNeigemean). On peut ici y lire un effet de l'altitude : 
-- l'axe 2 est décrit par des variables topographiques (pente et relief). Diversité plus grande et pente plus grande
+Interprétation des axes :  
+
+* l'axe 1 est décrit par les variables climatiques (vent, nébulosité, pluie, gel, hauteur de neige, température) qui sont corrélés positivement à cet axe. C'est-à-dire que cet axe représente des pixels aux températures chaudes (t90 et t10), secs (rain0), ventés (wind90 et wind10), enneigés (htNeigemean). On peut ici y lire un effet de l'altitude.
+* l'axe 2 est décrit par des variables topographiques (pente et relief). Diversité plus grande et pente plus grande.
+
+* Item 1
+* Item 2
+    + Item 2a
+    + Item 2b
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -288,14 +328,45 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
                    DI[grep("septembre",DI)]))
 ``` 
 
-Distribution des variables sur l'axe 1 et l'axe 2.
+Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
+DV = tout[grep("graph_var_quanti_axes1_2",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
+
+Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quanti_axes2_3",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes2_3",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+
+Interprétation des axes :
+
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -437,14 +508,24 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
                    DI[grep("septembre",DI)]))
 ``` 
 
-Distribution des variables sur l'axe 1 et l'axe 2.
+Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
+DV = tout[grep("graph_var_",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
+
+Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quanti_axes2_3",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -514,11 +595,21 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 Distribution des variables sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
+DV = tout[grep("graph_var_",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
+
+Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
 
 Tableau récapitulatif des variables utilisée dans la dimension :
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -589,7 +680,26 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 Distribution des variables sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var",tout)]
+DV = tout[grep("graph_var_",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+
+Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_quali_axes2_3",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
