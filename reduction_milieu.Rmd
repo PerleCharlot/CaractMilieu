@@ -958,6 +958,10 @@ Aux valeurs élevées de cet axe, on trouve des pixels ventés, enneigés, secs 
 Au contraire, les pixels présentant des valeurs faibles dans cet axe sont plus chauds, avec une nébulosité plus forte, et possèdent un bilan hydrique fort ainsi qu'une productivité en biomasse végétale élevée.  
 Cet axe semble décrire un étagement altitudinal des pixels. Cette hypothèse est vérifiée par la visualisation cartographique : ce sont bien des pixels d'altitude qui ont les valeurs les plus élevées dans l'axe 1.
 
+Qu'apporte cet axe par rapport à un MNT ?  
+En comparant ce premier axe à des courbes de niveau, on remarque que l'axe est effectivement assez similaire aux courbes de niveau. Néanmoins, on observe des nuances au sein d'une même tranche d'altitude. De plus, le plateau de l'Arselle est plus différenciée que seulement par l'altitude. Ainsi, bien qu'extrement tiré par l'altitude, le premier axe de cet ACP retransmet aussi d'autres informations.  
+Pour visualisation sur QGIS : C:/Users/perle.charlot/Documents/PhD/comparaison_mnt_axe1ACP.qgz
+
 * Axe 2 : décrit principalement par des variables appartenant à la dimension contexte spatiale.
 Aux valeurs élevées de cet axe, on trouve des pixels qui sont entourés par de nombreux pixels similaires et qui appartiennent à de grands patchs d'habitat identique. De plus, la strate basse de ces pixels est moyennement pénétrable (type sous bois) et le feuillage y est abondant. Le relief est plutôt plat, du type vallées en U.
 Au contraire, les pixels présentant des valeurs faibles dans cet axe ont une strate basse peu pénétrable (type lande à éricacées), un feuillage moyennement abondant (type lande), une visibilité médiane forte et sont situés dans une zone protégée mais sans interdiction. De plus, ces pixels semblent plus subir le réchauffement climatique (moyenne de température 1989-2018 supérieure à moyenne 1959-1988).  
@@ -1010,28 +1014,48 @@ m5 <- mapview(r5,layer.name="Axe 2 - Septembre",col.regions=brewer.pal(5,"Greens
 leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 ```
 
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
 
 Pourcentage de contribution des variables pour l'**axe 3** de l'AFDM.
 
