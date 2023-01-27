@@ -892,9 +892,10 @@ L'objectif est ensuite de repérer où se situent les différents usages au sein
 
 <!-- ``` -->
 
-# Analyse factorielle sur toutes les variables (sans considérer les dimensions) {.tabset}
+<!-- # Analyse factorielle sur toutes les variables (sans considérer les dimensions) {.tabset} -->
+# Analyse factorielle sur toutes les variables (en pondérant par dimension) {.tabset}
 
-Avec ACP sur variables climatiques.
+<!-- Avec ACP sur variables climatiques. -->
 
 ## Graphiques
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
@@ -933,23 +934,45 @@ include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
                    C2[grep("septembre",C2)]))
 ``` 
 
-Distribution des variables quantitatives sur l'axe 1 et l'axe 2.
+
+Pourcentage de contribution des variables pour l'**axe 3** de l'AFDM.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_quanti_axes1_2",tout)]
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+
+Cercle de corrélation (axe 1 et 2).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("graph_var_toutes",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
 
-Distribution des variables qualitatives sur l'axe 1 et l'axe 2.
+
+Cercle de corrélation (axe 2 et 3).
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_quali_axes1_2",tout)]
+DV = tout[grep("cercle_correlation_axes2_3_toutes",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
 ``` 
+
+
+<!-- Distribution des variables qualitatives sur l'axe 1 et l'axe 2. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
 
  Interprétation des axes :  
 
@@ -967,6 +990,10 @@ Aux valeurs élevées de cet axe, on trouve des pixels qui sont entourés par de
 Au contraire, les pixels présentant des valeurs faibles dans cet axe ont une strate basse peu pénétrable (type lande à éricacées), un feuillage moyennement abondant (type lande), une visibilité médiane forte et sont situés dans une zone protégée mais sans interdiction. De plus, ces pixels semblent plus subir le réchauffement climatique (moyenne de température 1989-2018 supérieure à moyenne 1959-1988).  
 Il semblerait que cet axe distingue d'une part les pixels des centres de large patch d'habitat identique (forêt et pentes larges des crêtes les plus hautes, vers Doménon) et d'autre part les pixels de bordure de forêts, de zones ouvertes d'habitats morcelés, de landes mixtes.
 
+* Axe 3 : décrit principalement par des variables appartenant à la dimension conditions abiotiques.  
+Aux valeurs élevées de cet axe, on trouve des pixels qui présentent une pente forte, en face nord, dont la strate basse est peu pénétrable (lande à éricacées) et avec un feuillage moyennement abondant.  
+Les valeurs faibles de cet axe se retrouvent aux pixels avec un rayonnement fort, un potentiel hydrique élevé et la présence de plan d'eau dans des reliefs ouverts.  
+Il semblerait que cet axe distingue d'une part les pixels orientés nord, qu'ils soient forestiers ou à landes, à pente modérée à élevée, et d'autre part les lacs et la tourbière de l'Arselle.
 
 ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
 paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/toutes/"),'.tif$',full.names = T,recursive=TRUE)
@@ -1014,82 +1041,6 @@ m5 <- mapview(r5,layer.name="Axe 2 - Septembre",col.regions=brewer.pal(5,"Greens
 leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 ```
 
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-
-Pourcentage de contribution des variables pour l'**axe 3** de l'AFDM.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-C3 = tout[grep("contrib_axe3",tout)]
-include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
-                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
-                   C3[grep("septembre",C3)]))
-``` 
-
-Distribution des variables quantitatives sur l'axe 2 et l'axe 3.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_quanti_axes2_3",tout)]
-include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
-                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
-                   DV[grep("septembre",DV)]))
-``` 
-
-Distribution des variables qualitatives sur l'axe 2 et l'axe 3.
-
-```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_quali_axes2_3",tout)]
-include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
-                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
-                   DV[grep("septembre",DV)]))
-``` 
-
-
-* Axe 3 : décrit principalement par des variables appartenant à la dimension conditions abiotiques.  
-Aux valeurs élevées de cet axe, on trouve des pixels qui présentent une pente forte, en face nord, dont la strate basse est peu pénétrable (lande à éricacées) et avec un feuillage moyennement abondant.  
-Les valeurs faibles de cet axe se retrouvent aux pixels avec un rayonnement fort, un potentiel hydrique élevé et la présence de plan d'eau dans des reliefs ouverts.  
-Il semblerait que cet axe distingue d'une part les pixels orientés nord, qu'ils soient forestiers ou à landes, à pente modérée à élevée, et d'autre part les lacs et la tourbière de l'Arselle.
-
 ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
 paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/toutes/"),'.tif$',full.names = T,recursive=TRUE)
 
@@ -1112,6 +1063,64 @@ m5 <- mapview(r5,layer.name="Axe 3 - Septembre",col.regions=rev(brewer.pal(5,"Bl
 ## view different aspects of same data set
 leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 ```
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+<!-- Distribution des variables qualitatives sur l'axe 2 et l'axe 3. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var_quali_axes2_3",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
+
+
+
+
 <br/>
 <br/>
 <br/>
@@ -1138,7 +1147,7 @@ leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 Distribution des pixels sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DI = tout[grep("graph_ind",tout)]
+DI = tout[grep("graph_ind_toutes",tout)]
 include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
                    DI[grep("juillet",DI)],DI[grep("aout",DI)],
                    DI[grep("septembre",DI)]))
