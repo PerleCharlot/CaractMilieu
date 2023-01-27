@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 28-10-2022
+# Dates de modification : 27-01-2023
 
 ### Librairies -------------------------------------
 
@@ -15,6 +15,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyverse)
 library(sjmisc)
+library(fastDummies)
 ### Fonctions -------------------------------------
 
 # Fonction qui calcule une FAMD, pour une dimension, pour une saison
@@ -33,6 +34,11 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                                       "brown","blueviolet","darkgray","antiquewhite","ivory3"))
   dim_col = corresp_col$colour_dim[which(corresp_col$dim_name == dimension)]
 
+  # Création et Sauvegarde des graphiques
+  # Pour rmd, sauvegarde plots seuls
+  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd")))
+    { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"),recursive = T)}
+  
   # Pour dimension = ACP_FAMD
   if(dimension == "ACP_FAMD"){
     corresp_axes = data.frame(axe_FAMd =c(paste0("axe1_B_",saison),paste0("axe2_B_",saison) ,paste0("axe3_B_",saison),
@@ -51,56 +57,86 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   # Retirer x et y
   tbl_data = subset(table_donnees,select=-c(x,y))
 
-  # Recoder les variables factorielles (pour ne pas qu'il y ait de doublons)
-  col_quali <- unlist(lapply(tbl_data, is.factor))
-  index_col_quali = which(col_quali == TRUE)
-  for(index_colonne in index_col_quali){
-    # # TEST
-    # index_colonne = index_col_quali[1]
-    cat(paste0("\nVariable ",names(tbl_data)[index_colonne], " en traitement."))
-    # recodage
-    recodage = paste0(levels(tbl_data[, index_colonne]),"=",
-                      names(tbl_data)[index_colonne],"_",levels(tbl_data[, index_colonne]),sep=";",collapse="")
-    # mutate avec var recodée + retirer la colonne initiale
-    tbl_data  = tbl_data %>%
-      mutate(X = rec(tbl_data[, index_colonne], rec =  recodage))
-    # changer name col var recodée
-    names(tbl_data)[which(names(tbl_data)== "X")] <- paste0(names(tbl_data)[index_colonne],"_rec")
-      }
-  # retirer les colonnes initiales
-  tbl_data  = tbl_data %>%
-    select(-index_col_quali)
+  # ### UTILITE DE CE CHUNK ?? pas vu pour dimension == "toutes"
+  # # Recoder les variables factorielles (pour ne pas qu'il y ait de doublons)
+  # col_quali <- unlist(lapply(tbl_data, is.factor))
+  # index_col_quali = which(col_quali == TRUE)
+  # for(index_colonne in index_col_quali){
+  #   # # TEST
+  #   # index_colonne = index_col_quali[1]
+  #   cat(paste0("\nVariable ",names(tbl_data)[index_colonne], " en traitement."))
+  #   # recodage
+  #   recodage = paste0(levels(tbl_data[, index_colonne]),"=",
+  #                     names(tbl_data)[index_colonne],"_",levels(tbl_data[, index_colonne]),sep=";",collapse="")
+  #   # mutate avec var recodée + retirer la colonne initiale
+  #   tbl_data  = tbl_data %>%
+  #     mutate(X = rec(tbl_data[, index_colonne], rec =  recodage))
+  #   # changer name col var recodée
+  #   names(tbl_data)[which(names(tbl_data)== "X")] <- paste0(names(tbl_data)[index_colonne],"_rec")
+  #     }
+  # # retirer les colonnes initiales
+  # tbl_data  = tbl_data %>%
+  #   select(-index_col_quali)
+  # new_names = substr(names(tbl_data)[grep("_rec",names(tbl_data))], 1,nchar(names(tbl_data)[grep("_rec",names(tbl_data))])-4)
+  # names(tbl_data)[grep("_rec",names(tbl_data))] <- new_names
+  # ### UTILITE DE CE CHUNK ?? pas vu pour dimension == "toutes"
+  
+  # # stop trying FAMD bc cannot weight by column
+  # t = try(FAMD(tbl_data , graph = FALSE))
+  # if(inherits(t, "try-error")) {
+  #   # PCA si seulement quanti
+  #   res.famd <- PCA(tbl_data , graph = FALSE)
+  #   type = "PCA"
+  # } else{  # FAMD si miste quali/quanti
+  #   res.famd <- FAMD(tbl_data , graph = FALSE)
+  #   type = "FAMD"
+  # }
 
-  new_names = substr(names(tbl_data)[grep("_rec",names(tbl_data))], 1,nchar(names(tbl_data)[grep("_rec",names(tbl_data))])-4)
-  names(tbl_data)[grep("_rec",names(tbl_data))] <- new_names
-
-  t = try(FAMD(tbl_data , graph = FALSE))
-  if(inherits(t, "try-error")) {
-    # PCA si seulement quanti
-    res.famd <- PCA(tbl_data , graph = FALSE)
-    type = "PCA"
-  } else{  # FAMD si miste quali/quanti
-    res.famd <- FAMD(tbl_data , graph = FALSE)
-    type = "FAMD"
-    }
+  # Transformer factoriel (ordi et quali) en boolean (0/1)
+  tbl_data2 <- dummy_cols(tbl_data,
+                          remove_selected_columns=T)
+  
+  # Matrice de pondération des variables dans ACP par dimension
+  df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
+  df_quanti = table_variables[table_variables$Nom %in% names(tbl_data2)]
+  df_w = rbind(df_quanti, df_dum)
+  df_w$weight = (1/df_w$b) * (1/df_w$n) * (1/df_w$D)
+  #sum(df_w$weight) # pas = 1 car dummies degre_interdiction n'a pas tous les mois ses 3 modalités
+  #Ordonner les poids
+  W = df_w$weight[match(names(tbl_data2), df_w$Nom)]
+  
+  # PCA
+  res.famd <- PCA(tbl_data2,
+                  ncp=7,
+                  col.w = W, # avec ou sans pondération (par dimension)
+                  graph = FALSE)
+  #type = "PCA"
 
   # % variance expliquée par axe
-  liste_variance_expl = round(res.famd$eig[,2],1)
-  if(length(liste_variance_expl)>2){
+  liste_variance_expl = round(res.famd$eig[,2],1) # quand il y a peu de var
+  n_ncp = length(liste_variance_expl)
+  if(n_ncp > 10){
+    n_ncp = 7
+  }
+  if(n_ncp > 2){
     graph_var_expl <- fviz_eig(res.famd,
                                choice=c("variance"),
                                geom=c("bar"),
                                xlab="Axe",
-                               ncp=length(liste_variance_expl),
+                               ncp=n_ncp,
                                barfill= dim_col,
                                ylim=c(0,100),
                                addlabels=F,main=' ',
                                font.x=c(24,"plain","black"),
                                font.y=c(28,"plain","black"),
                                font.tickslab = c(24,"plain","black")
-    )  + geom_text(size = 12,label = liste_variance_expl[1:length(liste_variance_expl)]) + annotate(geom="text", x=length(liste_variance_expl)/2, y=80, size = 12,
-                   label=paste0("Somme variance expliquée\npar 3 premiers axes : ",sum(liste_variance_expl[1:3]),"%"),
-                   color="black")
+    )+ annotate(geom="text", 
+                x=n_ncp/2, y=80, size = 12,
+                label=paste0("Somme variance expliquée\npar 3 premiers axes : ",sum(liste_variance_expl[1:3]),"%"),
+                color="black"
+                )    + geom_text(size = 12,
+                   label = liste_variance_expl[1:n_ncp]) 
+    
   } else {
     graph_var_expl <- fviz_eig(res.famd,
                                choice=c("variance"),
@@ -120,216 +156,225 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
 
   # Graphique des variables
   options(ggrepel.max.overlaps = Inf)
-  graph_var <- fviz_famd_var(res.famd, "var", col.var = "cos2",geom=c("arrow","text"),
-                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                             font.x=c(24,"plain","black"),
-                             font.y=c(24,"plain","black"),
-                             font.tickslab = c(24,"plain","black"),
-                             labelsize=8,
-                             repel = TRUE)
-  if(type == "PCA"){
-    graph_var_quanti_23 <- fviz_famd_var(res.famd, "var", col.var = "cos2",
-                                         geom=c("arrow","text"),
-                                         axes = c(2, 3),
-                                         font.x=c(24,"plain","black"),
-                                         font.y=c(24,"plain","black"),
-                                         font.tickslab = c(24,"plain","black"),
-                                         labelsize=8,
-                                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                         repel = TRUE)
-    p8b = graph_var_quanti_23
-    png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes2_3_",dimension,"_",saison,".png"),
+  # graph_var <- fviz_famd_var(res.famd, "var", col.var = "cos2",geom=c("arrow","text"),
+  #                            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                            font.x=c(24,"plain","black"),
+  #                            font.y=c(24,"plain","black"),
+  #                            font.tickslab = c(24,"plain","black"),
+  #                            labelsize=8,
+  #                            repel = TRUE)
+  
+  # Si on a plus de 10 variables dans l'ACP, on ne montre que les 12 qui contribuent le +
+  # Si on en a moins que 10, on en mettre le nombre total
+  nb_axes_grap = ifelse(n_ncp == 7,12,n_ncp)
+  titre_graph = ifelse(nb_axes_grap == 12,"Cercle de corrélation (12 variables contribuant le plus)","Cercle de corrélation" )
+  graph_var_1_2 <- fviz_pca_var(res.famd, 
+                            title=titre_graph,
+                            axes=c(1,2),
+               col.var = "cos2",
+               geom=c("arrow","text"),
+               gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+               font.x=c(24,"plain","black"),
+               font.y=c(24,"plain","black"),
+               font.tickslab = c(24,"plain","black"),
+               labelsize=8,
+               select.var = list(contrib= nb_axes_grap),
+               habillage="none",
+               repel = TRUE)
+  graph_var_2_3 <- fviz_pca_var(res.famd, 
+                                title=titre_graph,
+                                axes=c(2,3),
+                                col.var = "cos2",
+                                geom=c("arrow","text"),
+                                gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                                font.x=c(24,"plain","black"),
+                                font.y=c(24,"plain","black"),
+                                font.tickslab = c(24,"plain","black"),
+                                labelsize=8,
+                                select.var = list(contrib= nb_axes_grap),
+                                habillage="none",
+                                repel = TRUE)
+
+    png(file=paste0(output_path,
+                    "/ACP/",dimension,
+                    "/",num_saison,saison,
+                    "/plot_rmd/cercle_correlation_axes2_3_",dimension,"_",saison,".png"),
         width=1000, height=800)
-    print(p8b)
+    print(graph_var_2_3)
     dev.off()
 
-  }
-
-  if(type == "FAMD"){
-
-    t = try(fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-                          geom=c("arrow","text"),
-                          font.x=c(24,"plain","black"),
-                          font.y=c(24,"plain","black"),
-                          font.tickslab = c(24,"plain","black"),
-                          labelsize=8,
-                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                          repel = TRUE))
-    if(inherits(t, "try-error")) {
-      # trop peu de vars quanti
-    } else{
-      n_vars = length(res.famd$quanti.var$contrib[,1])
-
-      graph_var_quanti_12 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-                                           geom=c("arrow","text"),
-                                           select.var = list(contrib = n_vars/1.5, cos2=0.2),#2/3 des vars
-                                           font.x=c(24,"plain","black"),
-                                           font.y=c(24,"plain","black"),
-                                           font.tickslab = c(24,"plain","black"),
-                                           labelsize=8,
-                                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                           repel = TRUE)
-      graph_var_quanti_23 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-                                           geom=c("arrow","text"),
-                                           axes = c(2, 3),
-                                           select.var = list(contrib = n_vars/1.5, cos2=0.2),
-                                           font.x=c(24,"plain","black"),
-                                           font.y=c(24,"plain","black"),
-                                           font.tickslab = c(24,"plain","black"),
-                                           labelsize=8,
-                                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                           repel = TRUE)
-
-      p8a = graph_var_quanti_12
-      p8b = graph_var_quanti_23
-      png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes1_2_",dimension,"_",saison,".png"),
-          width=1000, height=800)
-      print(p8a)
-      dev.off()
-      png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes2_3_",dimension,"_",saison,".png"),
-          width=1000, height=800)
-      print(p8b)
-      dev.off()
-    }
-
-    t = try(fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
-                          geom=c("arrow","text"),
-                          font.x=c(24,"plain","black"),
-                          font.y=c(24,"plain","black"),
-                          font.tickslab = c(24,"plain","black"),
-                          labelsize=8,
-                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                          repel = TRUE))
-    if(inherits(t, "try-error")) {
-      # trop peu de vars quali
-    } else {
-      n_vars = length(res.famd$quali.var$contrib[,1])
-      graph_var_quali_12 <- fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
-                                          geom=c("arrow","text"),
-                                          font.x=c(24,"plain","black"),
-                                          font.y=c(24,"plain","black"),
-                                          font.tickslab = c(24,"plain","black"),
-                                          labelsize=8,
-                                          select.var = list(contrib = n_vars/1.5, cos2=0.2),
-                                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                          repel = TRUE)
-      if(length(liste_variance_expl)>2){
-        graph_var_quali_23 <- fviz_famd_var(res.famd, "quali.var",
-                                            col.var = "cos2",
-                                            geom=c("arrow","text"),
-                                            axes = c(2, 3),
-                                            font.x=c(24,"plain","black"),
-                                            font.y=c(24,"plain","black"),
-                                            font.tickslab = c(24,"plain","black"),
-                                            labelsize=8,
-                                            select.var = list(contrib = n_vars/1.5, cos2=0.1),
-                                            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                            repel = TRUE)
-        p9b = graph_var_quali_23
-        png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes2_3_",dimension,"_",saison,".png"),
-            width=1000, height=800)
-        print(p9b)
-        dev.off()
-        }
-
-      p9a = graph_var_quali_12
-
-      png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes1_2_",dimension,"_",saison,".png"),
-          width=1000, height=800)
-      print(p9a)
-      dev.off()
-
-
-    }
-  }
-
+  # if(type == "FAMD"){
+  # 
+  #   t = try(fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
+  #                         geom=c("arrow","text"),
+  #                         font.x=c(24,"plain","black"),
+  #                         font.y=c(24,"plain","black"),
+  #                         font.tickslab = c(24,"plain","black"),
+  #                         labelsize=8,
+  #                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                         repel = TRUE))
+  #   if(inherits(t, "try-error")) {
+  #     # trop peu de vars quanti
+  #   } else{
+  #     n_vars = length(res.famd$quanti.var$contrib[,1])
+  # 
+  #     graph_var_quanti_12 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
+  #                                          geom=c("arrow","text"),
+  #                                          select.var = list(contrib = n_vars/1.5, cos2=0.2),#2/3 des vars
+  #                                          font.x=c(24,"plain","black"),
+  #                                          font.y=c(24,"plain","black"),
+  #                                          font.tickslab = c(24,"plain","black"),
+  #                                          labelsize=8,
+  #                                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                                          repel = TRUE)
+  #     graph_var_quanti_23 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
+  #                                          geom=c("arrow","text"),
+  #                                          axes = c(2, 3),
+  #                                          select.var = list(contrib = n_vars/1.5, cos2=0.2),
+  #                                          font.x=c(24,"plain","black"),
+  #                                          font.y=c(24,"plain","black"),
+  #                                          font.tickslab = c(24,"plain","black"),
+  #                                          labelsize=8,
+  #                                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                                          repel = TRUE)
+  # 
+  #     p8a = graph_var_quanti_12
+  #     p8b = graph_var_quanti_23
+  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes1_2_",dimension,"_",saison,".png"),
+  #         width=1000, height=800)
+  #     print(p8a)
+  #     dev.off()
+  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes2_3_",dimension,"_",saison,".png"),
+  #         width=1000, height=800)
+  #     print(p8b)
+  #     dev.off()
+  #   }
+  # 
+  #   t = try(fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
+  #                         geom=c("arrow","text"),
+  #                         font.x=c(24,"plain","black"),
+  #                         font.y=c(24,"plain","black"),
+  #                         font.tickslab = c(24,"plain","black"),
+  #                         labelsize=8,
+  #                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                         repel = TRUE))
+  #   if(inherits(t, "try-error")) {
+  #     # trop peu de vars quali
+  #   } else {
+  #     n_vars = length(res.famd$quali.var$contrib[,1])
+  #     graph_var_quali_12 <- fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
+  #                                         geom=c("arrow","text"),
+  #                                         font.x=c(24,"plain","black"),
+  #                                         font.y=c(24,"plain","black"),
+  #                                         font.tickslab = c(24,"plain","black"),
+  #                                         labelsize=8,
+  #                                         select.var = list(contrib = n_vars/1.5, cos2=0.2),
+  #                                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                                         repel = TRUE)
+  #     if(length(liste_variance_expl)>2){
+  #       graph_var_quali_23 <- fviz_famd_var(res.famd, "quali.var",
+  #                                           col.var = "cos2",
+  #                                           geom=c("arrow","text"),
+  #                                           axes = c(2, 3),
+  #                                           font.x=c(24,"plain","black"),
+  #                                           font.y=c(24,"plain","black"),
+  #                                           font.tickslab = c(24,"plain","black"),
+  #                                           labelsize=8,
+  #                                           select.var = list(contrib = n_vars/1.5, cos2=0.1),
+  #                                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  #                                           repel = TRUE)
+  #       p9b = graph_var_quali_23
+  #       png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes2_3_",dimension,"_",saison,".png"),
+  #           width=1000, height=800)
+  #       print(p9b)
+  #       dev.off()
+  #       }
+  # 
+  #     p9a = graph_var_quali_12
+  # 
+  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes1_2_",dimension,"_",saison,".png"),
+  #         width=1000, height=800)
+  #     print(p9a)
+  #     dev.off()
+  # 
+  # 
+  #   }
+  # }
+    
   # Colorer les barres par dimension
+  nb_vars_grap = ifelse(n_ncp == 7,15,n_ncp)
+  titre_graph_eboul = ifelse(nb_vars_grap == 15,"Eboulis des valeurs propres (15 variables contribuant le plus)",
+                       "Eboulis des valeurs propres " )
   graph_contrib_var_axe1 <- fviz_contrib(res.famd, "var",
                axes = 1,
-               title='',
+               title=paste0(titre_graph_eboul," - Axe 1"),
+               top=nb_vars_grap,
                fill = "name",
                color = "black",
                font.y=c(24,"plain","black"),
                font.tickslab = c(28,"plain","black"))+
     scale_fill_manual(values = palette_couleur)+
     theme(legend.position = "none")
+  
   graph_contrib_var_axe2 <- fviz_contrib(res.famd, "var",
                                          axes = 2,
-                                         title='',
+                                         title=paste0(titre_graph_eboul," - Axe 2"),
+                                         top=nb_vars_grap,
                                          fill = "name",
                                          color = "black",
                                          font.y=c(24,"plain","black"),
                                          font.tickslab = c(28,"plain","black"))+
     scale_fill_manual(values = palette_couleur)+
     theme(legend.position = "none")
-  if(length(liste_variance_expl)>2){
+
+  if(n_ncp > 2){
     graph_contrib_var_axe3 <- fviz_contrib(res.famd, "var",
                                            axes = 3,
-                                           title='',
+                                           title=paste0(titre_graph_eboul," - Axe 3"),
+                                           top=nb_vars_grap,
                                            fill = "name",
                                            color = "black",
                                            font.y=c(24,"plain","black"),
                                            font.tickslab = c(28,"plain","black"))+
       scale_fill_manual(values = palette_couleur)+
       theme(legend.position = "none")
+
   }
 
   # Graphique des individus
-  t2 = try(fviz_famd_ind(res.famd,  alpha.ind = 0.05,
-                         geom=c("point"),
-                         repel = FALSE), silent=T)
-  if(inherits(t2, "try-error")) {
-    graph_ind <- fviz_pca_ind(res.famd,  alpha.ind = 0.05,
+  graph_ind <- fviz_pca_ind(res.famd,  alpha.ind = 0.05,
                               title=' ',
                               geom=c("point"),
                               font.x=c(28,"plain","black"),
                               font.y=c(28,"plain","black"),
                               font.tickslab = c(28,"plain","black"),
                               repel = FALSE)
-  } else{
-    graph_ind <- fviz_famd_ind(res.famd,  alpha.ind = 0.05,
-                               title=' ',
-                               font.x=c(28,"plain","black"),
-                               font.y=c(28,"plain","black"),
-                               font.tickslab = c(28,"plain","black"),
-                               geom=c("point"),
-                               repel = FALSE)}
 
-  # Création et Sauvegarde des graphiques
-  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison))){
-    dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison),recursive = T)
-    }
   p1 = plot(graph_var_expl)
   p2 = plot(graph_contrib_var_axe1)
   p3 = plot(graph_contrib_var_axe2)
   p4 = p1 / (p2 | p3)
+  
+  # Sauvegarde des graphiques en format images
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/contrib_",dimension,"_",saison,".png"),
       width=1400, height=800)
   print(p4)
   dev.off()
-
-  p5 = graph_var
+  p5 = graph_var_1_2
   p6 = graph_ind
   p7 = p5 | p6
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
       width=1400, height=800)
   print(p7)
   dev.off()
-
-  # Pour rmd, sauvegarde plots seuls
-  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"))){
-    dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"))}
-
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_",dimension,"_",saison,".png"),
       width=1000, height=800)
   print(p5)
   dev.off()
-
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_ind_",dimension,"_",saison,".png"),
       width=1000, height=800)
   print(p6)
   dev.off()
-
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe1_",dimension,"_",saison,".png"),
       width=1000, height=800)
   print(graph_contrib_var_axe1)
@@ -338,13 +383,12 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
       width=1000, height=800)
   print(graph_contrib_var_axe2)
   dev.off()
-  if(length(liste_variance_expl)>2){
+  if(n_ncp>2){
     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe3_",dimension,"_",saison,".png"),
         width=1000, height=800)
     print(graph_contrib_var_axe3)
     dev.off()
   }
-
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/eboulis_variance_",dimension,"_",saison,".png"),
       width=1000, height=800)
   print(graph_var_expl)
@@ -382,7 +426,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   rast_axe2 = ExtCRS(rast_axe2)
   writeRaster(rast_axe1, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe1_",dimension,"_",saison,".tif"), overwrite=T)
   writeRaster(rast_axe2, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe2_",dimension,"_",saison,".tif"), overwrite=T)
-  if(length(liste_variance_expl)>2){
+  if(n_ncp>2){
     rast_axe3 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe3), crs=EPSG_2154)
     names(rast_axe3) = paste0("axe3_",dimension,"_",saison)
     rast_axe3 = ExtCRS(rast_axe3)
@@ -507,7 +551,7 @@ fct_FAMD_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
 
   # # # TEST
   # periode = c("mai",'juin','juillet','aout','septembre')
-  # i = periode[1]
+  # i = periode[2]
   # palette_couleur = mypalette
 
   # Fonctionnement par période
@@ -655,6 +699,7 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 
 #### Tables ####
 path_table_variables <- paste0(input_path,"/liste_variables.csv")
+path_table_variables_dummies <- paste0(input_path,"/liste_variables_dummies.csv")
 path_table_points_multiusage <- "C:/Users/perle.charlot/Documents/PhD/DATA/R_git/CaractUsages/output/multiusage/table_points_multiusage.csv"
 path_coords_usages <- "C:/Users/perle.charlot/Documents/PhD/DATA/R_git/CaractUsages/output/par_periode/"
 
@@ -670,7 +715,8 @@ liste.mois = c("mai","juin","juillet","aout","septembre")
 
 ### Programme -------------------------------------
 table_variables <- fread(path_table_variables)
-col_dim = merge(table_variables, corresp_col,by.x="Dimension", by.y="dim_name")
+table_variable_dummies <- fread(path_table_variables_dummies, dec=",")
+col_dim = merge(rbind(table_variables, table_variable_dummies), corresp_col,by.x="Dimension", by.y="dim_name")
 mypalette <- setNames(col_dim$colour_dim, 
                       col_dim$Nom)
 
