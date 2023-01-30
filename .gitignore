@@ -46,6 +46,7 @@ input/
 output/
 output_sauvegarde/
 analyse_eboulis/
+rmd/
 
 # tableurs excels
 *.xlsx
@@ -55,3 +56,7 @@ analyse_eboulis/
 
 # Projet
 *.Rproj
+
+# mardown
+*.html
+*.md
