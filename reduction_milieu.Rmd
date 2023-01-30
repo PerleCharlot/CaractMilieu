@@ -1,7 +1,7 @@
 ---
 title: "Réduction des variables du milieu"
 author: "Perle Charlot"
-date: "Création : 01/08/2022"
+date: "Création : 01/08/2022 - Modification : 30/01/2023"
 output: 
   html_document:
     toc: TRUE
@@ -892,14 +892,13 @@ L'objectif est ensuite de repérer où se situent les différents usages au sein
 
 <!-- ``` -->
 
-<!-- # Analyse factorielle sur toutes les variables (sans considérer les dimensions) {.tabset} -->
-# Analyse factorielle sur toutes les variables (en pondérant par dimension) {.tabset}
-
-<!-- Avec ACP sur variables climatiques. -->
-
+# Analyse factorielle sur toutes les variables (sans pondération par dimension) {.tabset}
+```{r, include=FALSE}
+type_donnees <- "ACP_sans_ponderation"
+``` 
 ## Graphiques
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-tout = list.files(recursive = T, paste0(wd,"/output/ACP/toutes/"), full.names = T)
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",type_donnees,"/"), full.names = T)
 table_variables <- fread(path_table_variables, header=T)
 ``` 
 
@@ -948,7 +947,7 @@ include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
 Cercle de corrélation (axe 1 et 2).
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("graph_var_toutes",tout)]
+DV = tout[grep("cercle_correlation_axe1_2",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
@@ -958,7 +957,7 @@ include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
 Cercle de corrélation (axe 2 et 3).
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DV = tout[grep("cercle_correlation_axes2_3_toutes",tout)]
+DV = tout[grep("cercle_correlation_axes2_3",tout)]
 include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
                    DV[grep("juillet",DV)],DV[grep("aout",DV)],
                    DV[grep("septembre",DV)]))
@@ -996,7 +995,7 @@ Les valeurs faibles de cet axe se retrouvent aux pixels avec un rayonnement fort
 Il semblerait que cet axe distingue d'une part les pixels orientés nord, qu'ils soient forestiers ou à landes, à pente modérée à élevée, et d'autre part les lacs et la tourbière de l'Arselle.
 
 ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
-paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/toutes/"),'.tif$',full.names = T,recursive=TRUE)
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
 
 paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe1_",paths_rast_ACP)]
 mapviewOptions(na.color = "transparent",
@@ -1019,7 +1018,7 @@ leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 ```
 
 ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
-paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/toutes/"),'.tif$',full.names = T,recursive=TRUE)
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
 
 paths_rast_ACP_axe2 = paths_rast_ACP[grep("axe2_",paths_rast_ACP)]
 mapviewOptions(na.color = "transparent",
@@ -1042,7 +1041,7 @@ leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 ```
 
 ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
-paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/toutes/"),'.tif$',full.names = T,recursive=TRUE)
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
 
 paths_rast_ACP_axe3 = paths_rast_ACP[grep("axe3_",paths_rast_ACP)]
 mapviewOptions(na.color = "transparent",
@@ -1147,7 +1146,7 @@ leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
 Distribution des pixels sur l'axe 1 et l'axe 2.
 
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
-DI = tout[grep("graph_ind_toutes",tout)]
+DI = tout[grep("graph_individus_",tout)]
 include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
                    DI[grep("juillet",DI)],DI[grep("aout",DI)],
                    DI[grep("septembre",DI)]))
@@ -1163,7 +1162,268 @@ include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
 <!-- ```  -->
 
 
-## Tableau récapitulatif des variables utilisées
+# Analyse factorielle sur toutes les variables (avec pondération par dimension) {.tabset}
+
+```{r, include=FALSE}
+type_donnees <- "ACP_avec_ponderation"
+``` 
+
+<!-- Avec ACP sur variables climatiques. -->
+
+## Graphiques
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",type_donnees,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+``` 
+
+|`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `|
+|----|----|----|----|----|
+|` `|` `|` `|` `|` `|
+
+Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+eboulis = tout[grep("eboulis_variance",tout)]
+include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)],
+                   eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)],
+                   eboulis[grep("septembre",eboulis)]))
+``` 
+
+Pourcentage de contribution des variables pour l'**axe 1** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe1",tout)]
+include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)],
+                   C1[grep("juillet",C1)],C1[grep("aout",C1)],
+                   C1[grep("septembre",C1)]))
+``` 
+
+Pourcentage de contribution des variables pour l'**axe 2** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C2 = tout[grep("contrib_axe2",tout)]
+include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)],
+                   C2[grep("juillet",C2)],C2[grep("aout",C2)],
+                   C2[grep("septembre",C2)]))
+``` 
+
+
+Pourcentage de contribution des variables pour l'**axe 3** de l'AFDM.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+C3 = tout[grep("contrib_axe3",tout)]
+include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)],
+                   C3[grep("juillet",C3)],C3[grep("aout",C3)],
+                   C3[grep("septembre",C3)]))
+``` 
+
+
+Cercle de corrélation (axe 1 et 2).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("cercle_correlation_axe1_2",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+
+Cercle de corrélation (axe 2 et 3).
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DV = tout[grep("cercle_correlation_axes2_3",tout)]
+include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)],
+                   DV[grep("juillet",DV)],DV[grep("aout",DV)],
+                   DV[grep("septembre",DV)]))
+``` 
+
+
+<!-- Distribution des variables qualitatives sur l'axe 1 et l'axe 2. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
+
+ Interprétation des axes :  
+
+* Axe 1 :GDD et NDVI toujours dans 4 premières variables contribuant le plus --> étagement altitudinal inversé (haute altitude <-> valeur négative).
+
+* Axe 2 : assez variable au cours des mois. Variable de CS bien présentes mais pas premières contributrices.
+
+* Axe 3 : couloirs d'avalanche ? Mais attention car variable "présence avalanche" est loin d'être précise et exhaustive.
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
+
+paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe1_",paths_rast_ACP)]
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP_axe1[grep("mai",paths_rast_ACP_axe1)])
+m1 <- mapview(r1,layer.name="Axe 1 - Mai",col.regions=brewer.pal(5,"RdYlBu"))
+r2 <- raster(paths_rast_ACP_axe1[grep("juin",paths_rast_ACP_axe1)])
+m2 <- mapview(r2,layer.name="Axe 1 - Juin",col.regions=brewer.pal(5,"RdYlBu"))
+r3 <- raster(paths_rast_ACP_axe1[grep("juillet",paths_rast_ACP_axe1)])
+m3 <- mapview(r3,layer.name="Axe 1 - Juillet",col.regions=brewer.pal(5,"RdYlBu"))
+r4 <- raster(paths_rast_ACP_axe1[grep("aout",paths_rast_ACP_axe1)])
+m4 <- mapview(r4,layer.name="Axe 1 - Aout",col.regions=brewer.pal(5,"RdYlBu"))
+r5 <- raster(paths_rast_ACP_axe1[grep("septembre",paths_rast_ACP_axe1)])
+m5 <- mapview(r5,layer.name="Axe 1 - Septembre",col.regions=brewer.pal(5,"RdYlBu"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
+```
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
+
+paths_rast_ACP_axe2 = paths_rast_ACP[grep("axe2_",paths_rast_ACP)]
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP_axe2[grep("mai",paths_rast_ACP_axe2)])
+m1 <- mapview(r1,layer.name="Axe 2 - Mai",col.regions=brewer.pal(5,"Greens"))
+r2 <- raster(paths_rast_ACP_axe2[grep("juin",paths_rast_ACP_axe2)])
+m2 <- mapview(r2,layer.name="Axe 2 - Juin",col.regions=brewer.pal(5,"Greens"))
+r3 <- raster(paths_rast_ACP_axe2[grep("juillet",paths_rast_ACP_axe2)])
+m3 <- mapview(r3,layer.name="Axe 2 - Juillet",col.regions=brewer.pal(5,"Greens"))
+r4 <- raster(paths_rast_ACP_axe2[grep("aout",paths_rast_ACP_axe2)])
+m4 <- mapview(r4,layer.name="Axe 2 - Aout",col.regions=brewer.pal(5,"Greens"))
+r5 <- raster(paths_rast_ACP_axe2[grep("septembre",paths_rast_ACP_axe2)])
+m5 <- mapview(r5,layer.name="Axe 2 - Septembre",col.regions=brewer.pal(5,"Greens"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
+```
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=TRUE)
+
+paths_rast_ACP_axe3 = paths_rast_ACP[grep("axe3_",paths_rast_ACP)]
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP_axe3[grep("mai",paths_rast_ACP_axe3)])
+m1 <- mapview(r1,layer.name="Axe 3 - Mai",col.regions=rev(brewer.pal(5,"Blues")))
+r2 <- raster(paths_rast_ACP_axe3[grep("juin",paths_rast_ACP_axe3)])
+m2 <- mapview(r2,layer.name="Axe 3 - Juin",col.regions=rev(brewer.pal(5,"Blues")))
+r3 <- raster(paths_rast_ACP_axe3[grep("juillet",paths_rast_ACP_axe3)])
+m3 <- mapview(r3,layer.name="Axe 3 - Juillet",col.regions=rev(brewer.pal(5,"Blues")))
+r4 <- raster(paths_rast_ACP_axe3[grep("aout",paths_rast_ACP_axe3)])
+m4 <- mapview(r4,layer.name="Axe 3 - Aout",col.regions=rev(brewer.pal(5,"Blues")))
+r5 <- raster(paths_rast_ACP_axe3[grep("septembre",paths_rast_ACP_axe3)])
+m5 <- mapview(r5,layer.name="Axe 3 - Septembre",col.regions=rev(brewer.pal(5,"Blues")))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, m4, m5, ncol=5)
+```
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+<!-- Distribution des variables qualitatives sur l'axe 2 et l'axe 3. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var_quali_axes2_3",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
+
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+Distribution des pixels sur l'axe 1 et l'axe 2.
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+DI = tout[grep("graph_individus",tout)]
+include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)],
+                   DI[grep("juillet",DI)],DI[grep("aout",DI)],
+                   DI[grep("septembre",DI)]))
+``` 
+
+<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
+
+<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
+<!-- DV = tout[grep("graph_var",tout)] -->
+<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
+<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
+<!--                    DV[grep("septembre",DV)])) -->
+<!-- ```  -->
+
+
+# Tableau récapitulatif des variables utilisées
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
 kable(table_variables)
 
