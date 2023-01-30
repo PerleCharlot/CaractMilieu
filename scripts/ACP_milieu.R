@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 27-01-2023
+# Dates de modification : 30-01-2023
 
 ### Librairies -------------------------------------
 
@@ -18,20 +18,25 @@ library(sjmisc)
 library(fastDummies)
 ### Fonctions -------------------------------------
 
-# Fonction qui calcule une FAMD, pour une dimension, pour une saison
-makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
+# Fonction qui calcule une ACP, pour une dimension, pour une saison
+makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderation){
   # # TEST
   # table_donnees = dt_stack
   # saison = i
-  # dimension = "toutes"
-  # palette_couleur = mypalette
-
+  # # dimension = "CA"
+  # # palette_couleur = mypalette
+  
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
   num_saison = corresp$numero_saison[which(corresp$periode == saison)]
-  corresp_col = data.frame(dim_name = c("CA","B","PV","CS","D","I","toutes","ACP_FAMD"),
+  corresp_col = data.frame(dim_name = c("CA","B","PV","CS","D","I",
+                                        "ACP_sans_ponderation","ACP_avec_ponderation",
+                                        "ACP_FAMD"),
                        colour_dim = c("dodgerblue","darkgoldenrod1","darkgreen",
-                                      "brown","blueviolet","darkgray","antiquewhite","ivory3"))
+                                      "brown","blueviolet","darkgray",
+                                      "antiquewhite","antiquewhite",
+                                      "ivory3"))
+  
   dim_col = corresp_col$colour_dim[which(corresp_col$dim_name == dimension)]
 
   # Création et Sauvegarde des graphiques
@@ -39,9 +44,9 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd")))
     { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"),recursive = T)}
   
-  # Pour dimension = ACP_FAMD
-  if(dimension == "ACP_FAMD"){
-    corresp_axes = data.frame(axe_FAMd =c(paste0("axe1_B_",saison),paste0("axe2_B_",saison) ,paste0("axe3_B_",saison),
+  # Pour dimension = ACP_AFDM (qui maintenant est une ACP d'ACP ...)
+  if(dimension == "ACP_AFDM"){
+    corresp_axes = data.frame(axe_AFDM =c(paste0("axe1_B_",saison),paste0("axe2_B_",saison) ,paste0("axe3_B_",saison),
                                           paste0("axe1_CA_",saison), paste0("axe2_CA_",saison), paste0("axe3_CA_",saison),
                                           paste0("axe1_CS_",saison), paste0("axe2_CS_",saison) ,paste0("axe3_CS_",saison),
                                           paste0("axe1_D_",saison) ,  paste0("axe2_D_",saison),
@@ -51,7 +56,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
     )
     a = merge(corresp_axes, corresp_col, by="dim_name")
     palette_couleur <- setNames(a$colour_dim,
-                          a$axe_FAMd)
+                          a$axe_AFDM)
   }
 
   # Retirer x et y
@@ -92,34 +97,60 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   #   type = "FAMD"
   # }
 
-  # Transformer factoriel (ordi et quali) en boolean (0/1)
-  tbl_data2 <- dummy_cols(tbl_data,
-                          remove_selected_columns=T)
   
-  # Matrice de pondération des variables dans ACP par dimension
-  df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
-  df_quanti = table_variables[table_variables$Nom %in% names(tbl_data2)]
-  df_w = rbind(df_quanti, df_dum)
-  df_w$weight = (1/df_w$b) * (1/df_w$n) * (1/df_w$D)
-  #sum(df_w$weight) # pas = 1 car dummies degre_interdiction n'a pas tous les mois ses 3 modalités
+  # Check for dummies variables
+  t = try(dummy_cols(tbl_data, remove_selected_columns=T), silent = TRUE)
+  if(inherits(t, "try-error")) {
+    tbl_data2 <- tbl_data
+    df_w = table_variables[table_variables$Nom %in% names(tbl_data2)]
+
+  } else {   
+    # Transformer factoriel (ordi et quali) en boolean (0/1)
+    tbl_data2 <- dummy_cols(tbl_data,
+                                     remove_selected_columns=T)
+    
+    #str(tbl_data2)
+    # Matrice de pondération des variables dans ACP par dimension
+    df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
+    df_quanti = table_variables[table_variables$Nom %in% names(tbl_data2)]
+    df_w = rbind(df_quanti, df_dum)
+  }
+  
+  # Dans tous les cas, les variables dummies sont pondérées
+  # Mais on peut ensuite pondérer les variables par dimension 
+  # (afin de donner un poids égale à chaque dimension)
+  
+  if(ponderation == "yes"){
+    cat("Analyse factorielle en composantes principales - avec pondération par dimension. \n")
+    df_w$weight = (1/df_w$b) * (1/df_w$n) * (1/df_w$D)
+  }
+  
+  if(ponderation == "no"){
+    cat("Analyse factorielle en composantes principales - sans pondération par dimension. \n")
+    if(dimension == "ACP_sans_ponderation"){
+      df_w$weight  =(1/df_w$b)* (1/length(tbl_data))
+    } else{df_w$weight = (1/df_w$b)* (1/df_w$n) # fonctionne pour ACP sur une dimension
+    }
+  }
   #Ordonner les poids
   W = df_w$weight[match(names(tbl_data2), df_w$Nom)]
+  #sum(W)
   
   # PCA
-  res.famd <- PCA(tbl_data2,
-                  ncp=7,
-                  col.w = W, # avec ou sans pondération (par dimension)
-                  graph = FALSE)
-  #type = "PCA"
+  res.pca <- PCA(tbl_data2,
+                   ncp=7,
+                   col.w = W, # avec ou sans pondération (par dimension)
+                   graph = FALSE,
+                 scale.unit = TRUE) # data are scaled to unit variance
 
   # % variance expliquée par axe
-  liste_variance_expl = round(res.famd$eig[,2],1) # quand il y a peu de var
+  liste_variance_expl = round(res.pca$eig[,2],1) # quand il y a peu de var
   n_ncp = length(liste_variance_expl)
   if(n_ncp > 10){
     n_ncp = 7
   }
-  if(n_ncp > 2){
-    graph_var_expl <- fviz_eig(res.famd,
+  if(n_ncp > 3){
+    graph_var_expl <- fviz_eig(res.pca,
                                choice=c("variance"),
                                geom=c("bar"),
                                xlab="Axe",
@@ -129,8 +160,8 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                                addlabels=F,main=' ',
                                font.x=c(24,"plain","black"),
                                font.y=c(28,"plain","black"),
-                               font.tickslab = c(24,"plain","black")
-    )+ annotate(geom="text", 
+                               font.tickslab = c(24,"plain","black")) +
+      annotate(geom="text", 
                 x=n_ncp/2, y=80, size = 12,
                 label=paste0("Somme variance expliquée\npar 3 premiers axes : ",sum(liste_variance_expl[1:3]),"%"),
                 color="black"
@@ -138,7 +169,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                    label = liste_variance_expl[1:n_ncp]) 
     
   } else {
-    graph_var_expl <- fviz_eig(res.famd,
+    graph_var_expl <- fviz_eig(res.pca,
                                choice=c("variance"),
                                geom=c("bar"),
                                xlab="Axe",
@@ -149,8 +180,8 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                                font.x=c(24,"plain","black"),
                                font.y=c(28,"plain","black"),
                                font.tickslab = c(24,"plain","black")
-    )  + geom_text(size = 15,label = liste_variance_expl[1:2])+ annotate(geom="text", x=2.5, y=80, size = 10,
-                   label=paste0("Somme variance expliquée\npar 3 premiers axes : ",sum(liste_variance_expl[1:2]),"%"),
+    )  + geom_text(size = 15,label = liste_variance_expl[1:2])+ annotate(geom="text", x=1.5, y=80, size = 10,
+                   label=paste0("Somme variance expliquée\npar 2 premiers axes : ",sum(liste_variance_expl[1:2]),"%"),
                    color="black")
   }
 
@@ -168,7 +199,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   # Si on en a moins que 10, on en mettre le nombre total
   nb_axes_grap = ifelse(n_ncp == 7,12,n_ncp)
   titre_graph = ifelse(nb_axes_grap == 12,"Cercle de corrélation (12 variables contribuant le plus)","Cercle de corrélation" )
-  graph_var_1_2 <- fviz_pca_var(res.famd, 
+  graph_var_1_2 <- fviz_pca_var(res.pca, 
                             title=titre_graph,
                             axes=c(1,2),
                col.var = "cos2",
@@ -181,20 +212,21 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                select.var = list(contrib= nb_axes_grap),
                habillage="none",
                repel = TRUE)
-  graph_var_2_3 <- fviz_pca_var(res.famd, 
-                                title=titre_graph,
-                                axes=c(2,3),
-                                col.var = "cos2",
-                                geom=c("arrow","text"),
-                                gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-                                font.x=c(24,"plain","black"),
-                                font.y=c(24,"plain","black"),
-                                font.tickslab = c(24,"plain","black"),
-                                labelsize=8,
-                                select.var = list(contrib= nb_axes_grap),
-                                habillage="none",
-                                repel = TRUE)
-
+  if(n_ncp > 3){
+    graph_var_2_3 <- fviz_pca_var(res.pca, 
+                                  title=titre_graph,
+                                  axes=c(2,3),
+                                  col.var = "cos2",
+                                  geom=c("arrow","text"),
+                                  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                                  font.x=c(24,"plain","black"),
+                                  font.y=c(24,"plain","black"),
+                                  font.tickslab = c(24,"plain","black"),
+                                  labelsize=8,
+                                  select.var = list(contrib= nb_axes_grap),
+                                  habillage="none",
+                                  repel = TRUE)
+    
     png(file=paste0(output_path,
                     "/ACP/",dimension,
                     "/",num_saison,saison,
@@ -202,6 +234,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
         width=1000, height=800)
     print(graph_var_2_3)
     dev.off()
+  }
 
   # if(type == "FAMD"){
   # 
@@ -305,7 +338,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   nb_vars_grap = ifelse(n_ncp == 7,15,n_ncp)
   titre_graph_eboul = ifelse(nb_vars_grap == 15,"Eboulis des valeurs propres (15 variables contribuant le plus)",
                        "Eboulis des valeurs propres " )
-  graph_contrib_var_axe1 <- fviz_contrib(res.famd, "var",
+  graph_contrib_var_axe1 <- fviz_contrib(res.pca, "var",
                axes = 1,
                title=paste0(titre_graph_eboul," - Axe 1"),
                top=nb_vars_grap,
@@ -316,19 +349,20 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
     scale_fill_manual(values = palette_couleur)+
     theme(legend.position = "none")
   
-  graph_contrib_var_axe2 <- fviz_contrib(res.famd, "var",
-                                         axes = 2,
-                                         title=paste0(titre_graph_eboul," - Axe 2"),
-                                         top=nb_vars_grap,
-                                         fill = "name",
-                                         color = "black",
-                                         font.y=c(24,"plain","black"),
-                                         font.tickslab = c(28,"plain","black"))+
-    scale_fill_manual(values = palette_couleur)+
-    theme(legend.position = "none")
-
-  if(n_ncp > 2){
-    graph_contrib_var_axe3 <- fviz_contrib(res.famd, "var",
+  if(n_ncp > 3){
+    graph_contrib_var_axe2 <- fviz_contrib(res.pca,
+                                           choice= "var",
+                                           axes = 2,
+                                           title=paste0(titre_graph_eboul," - Axe 2"),
+                                           top=nb_vars_grap,
+                                           fill = "name",
+                                           color = "black",
+                                           font.y=c(24,"plain","black"),
+                                           font.tickslab = c(28,"plain","black"))+
+      scale_fill_manual(values = palette_couleur)+
+      theme(legend.position = "none")
+    
+    graph_contrib_var_axe3 <- fviz_contrib(res.pca, "var",
                                            axes = 3,
                                            title=paste0(titre_graph_eboul," - Axe 3"),
                                            top=nb_vars_grap,
@@ -342,7 +376,7 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
   }
 
   # Graphique des individus
-  graph_ind <- fviz_pca_ind(res.famd,  alpha.ind = 0.05,
+  graph_ind <- fviz_pca_ind(res.pca,  alpha.ind = 0.05,
                               title=' ',
                               geom=c("point"),
                               font.x=c(28,"plain","black"),
@@ -350,69 +384,74 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
                               font.tickslab = c(28,"plain","black"),
                               repel = FALSE)
 
-  p1 = plot(graph_var_expl)
-  p2 = plot(graph_contrib_var_axe1)
-  p3 = plot(graph_contrib_var_axe2)
-  p4 = p1 / (p2 | p3)
-  
   # Sauvegarde des graphiques en format images
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/contrib_",dimension,"_",saison,".png"),
-      width=1400, height=800)
-  print(p4)
-  dev.off()
-  p5 = graph_var_1_2
-  p6 = graph_ind
-  p7 = p5 | p6
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
-      width=1400, height=800)
-  print(p7)
-  dev.off()
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_",dimension,"_",saison,".png"),
+  p1 = graph_var_expl
+  p2 = graph_contrib_var_axe1
+  
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/eboulis_variance_",dimension,"_",saison,".png"),
       width=1000, height=800)
-  print(p5)
-  dev.off()
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_ind_",dimension,"_",saison,".png"),
-      width=1000, height=800)
-  print(p6)
+  plot(p1)
   dev.off()
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe1_",dimension,"_",saison,".png"),
       width=1000, height=800)
-  print(graph_contrib_var_axe1)
+  plot(p2)
   dev.off()
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe2_",dimension,"_",saison,".png"),
-      width=1000, height=800)
-  print(graph_contrib_var_axe2)
-  dev.off()
-  if(n_ncp>2){
+  
+  if(n_ncp>3){
+    p3 = graph_contrib_var_axe2
+    png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe2_",dimension,"_",saison,".png"),
+        width=1000, height=800)
+    plot(p3)
+    dev.off()
+    
+    p3bis = graph_contrib_var_axe3
     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe3_",dimension,"_",saison,".png"),
         width=1000, height=800)
-    print(graph_contrib_var_axe3)
+    plot(p3bis)
     dev.off()
   }
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/eboulis_variance_",dimension,"_",saison,".png"),
+
+  t = try(p1 / (p2 | p3), silent = TRUE)
+  if(inherits(t, "try-error")) {
+    p4 = p1 / (p2)
+  } else { p4 = p1 / (p2 | p3)}
+  
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/contrib_",dimension,"_",saison,".png"),
+      width=1400, height=800)
+  plot(p4)
+  dev.off()
+  
+  p5 = graph_var_1_2
+  p6 = graph_ind
+  p7 = p5 | p6
+  
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
+      width=1400, height=800)
+  plot(p7)
+  dev.off()
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/cercle_correlation_axe1_2_",dimension,"_",saison,".png"),
       width=1000, height=800)
-  print(graph_var_expl)
+  plot(p5)
+  dev.off()
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_individus_",dimension,"_",saison,".png"),
+      width=1000, height=800)
+  plot(p6)
   dev.off()
 
   # valeurs des axes, par pixels
   # FAMD_tbl <-as.data.frame(res.famd$svd$U)
-  FAMD_tbl <- as.data.frame(res.famd$ind$coord)
-  names(FAMD_tbl) = paste0("axe",seq(1:length(colnames(FAMD_tbl))))
-  table_all <- cbind(table_donnees,FAMD_tbl)
-  write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/tblFAMD_",dimension,"_",saison,".csv"))
+  PCA_tbl <- as.data.frame(res.pca$ind$coord)
+  names(PCA_tbl) = paste0("axe",seq(1:length(colnames(PCA_tbl))))
+  table_all <- cbind(table_donnees,PCA_tbl)
+  write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/tblPCA_",dimension,"_",saison,".csv"))
 
   # Création des rasters des axes 1, 2 et 3 de la FAMD
-  rast_axe1 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe1), crs=EPSG_2154)
-  names(rast_axe1) = paste0("axe1_",dimension,"_",saison)
-  rast_axe2 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe2), crs=EPSG_2154)
-  names(rast_axe2) = paste0("axe2_",dimension,"_",saison)
-
   ref = raster(chemin_mnt)
   ExtCRS <- function(raster_to_check, raster_ref = ref){
     # #TEST
     # raster_to_check = rast_axe1
     # raster_ref=ref
-
+    
     ext.to.check <- extent(raster_to_check)
     sameCRS <- compareCRS(raster_to_check,EPSG_2154)
     sameExtent <- (ext.to.check == extent(raster_ref))
@@ -422,31 +461,65 @@ makeFAMD <- function(table_donnees, saison, dimension, palette_couleur){
     }
     return(raster_to_check)
   }
+  
+  rast_axe1 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe1), crs=EPSG_2154)
+  names(rast_axe1) = paste0("axe1_",dimension,"_",saison)
   rast_axe1 = ExtCRS(rast_axe1)
-  rast_axe2 = ExtCRS(rast_axe2)
-  writeRaster(rast_axe1, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe1_",dimension,"_",saison,".tif"), overwrite=T)
-  writeRaster(rast_axe2, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe2_",dimension,"_",saison,".tif"), overwrite=T)
-  if(n_ncp>2){
+  writeRaster(rast_axe1, 
+              paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe1_",dimension,"_",saison,".tif"), 
+              overwrite=T)
+
+  if(n_ncp>3){
+    rast_axe2 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe2), crs=EPSG_2154)
+    names(rast_axe2) = paste0("axe2_",dimension,"_",saison)
+    rast_axe2 = ExtCRS(rast_axe2)
+    writeRaster(rast_axe2, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe2_",dimension,"_",saison,".tif"), overwrite=T)
+    
     rast_axe3 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe3), crs=EPSG_2154)
     names(rast_axe3) = paste0("axe3_",dimension,"_",saison)
     rast_axe3 = ExtCRS(rast_axe3)
     writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
+
+    rast_axe4 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe4), crs=EPSG_2154)
+    names(rast_axe4) = paste0("axe4_",dimension,"_",saison)
+    rast_axe4 = ExtCRS(rast_axe4)
+    writeRaster(rast_axe4, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe4_",dimension,"_",saison,".tif"), overwrite=T)
+    
+    rast_axe5 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe5), crs=EPSG_2154)
+    names(rast_axe5) = paste0("axe5_",dimension,"_",saison)
+    rast_axe5 = ExtCRS(rast_axe5)
+    writeRaster(rast_axe5, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe5_",dimension,"_",saison,".tif"), overwrite=T)
+    
+    rast_axe6 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe6), crs=EPSG_2154)
+    names(rast_axe6) = paste0("axe6_",dimension,"_",saison)
+    rast_axe6 = ExtCRS(rast_axe6)
+    writeRaster(rast_axe6, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe6_",dimension,"_",saison,".tif"), overwrite=T)
+    
+    rast_axe7 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe7), crs=EPSG_2154)
+    names(rast_axe7) = paste0("axe7_",dimension,"_",saison)
+    rast_axe7 = ExtCRS(rast_axe7)
+    writeRaster(rast_axe7, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe7_",dimension,"_",saison,".tif"), overwrite=T)
+    
     # sauvegarde brick pour visualiser en multiband sur QGIS
-    writeRaster(stack(rast_axe1,rast_axe2,rast_axe3), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)
+    writeRaster(stack(rast_axe1,rast_axe2,rast_axe3,rast_axe4,rast_axe5,rast_axe6,rast_axe7), 
+                paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)
+    
   }else{# sauvegarde brick pour visualiser en multiband sur QGIS
-    writeRaster(stack(rast_axe1,rast_axe2), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)}
+    writeRaster(stack(rast_axe1), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)}
   }
 
 # fonction qui fait tout ...
-fct_FAMD <- function(dimension,
+fct_PCA <- function(dimension,
                      # arg_ACP,
                      periode=c("mai",'juin','juillet','aout','septembre'),
-                     palette_couleur=mypalette){
+                     palette_couleur=mypalette,
+                    ponderation){
 
   # # # TEST
-  # dimension = liste.dim[1]
+  # dimension = liste.dim[4]
   # periode = c("mai",'juin','juillet','aout','septembre')
   # palette_couleur = mypalette
+  # ponderation = "no"
   # # # TEST
   # i = periode[1]
 
@@ -513,7 +586,7 @@ fct_FAMD <- function(dimension,
     cat(paste0("\nPréparation table des variables pour dimension ",dimension,
                " pour le mois de ",i," effectuée.\n"))
 
-    makeFAMD(dt_stack,i, dimension, palette_couleur)
+    makePCA(dt_stack,i, dimension, palette_couleur,ponderation)
   }
 
   # # Chargement d'une stack d'une dimension pour une saison
@@ -546,13 +619,14 @@ fct_FAMD <- function(dimension,
 
 
 # fonction FAMD sur toutes les variables en meme temps
-fct_FAMD_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
-                         palette_couleur=mypalette){
+fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
+                         palette_couleur=mypalette, ponderation){
 
   # # # TEST
   # periode = c("mai",'juin','juillet','aout','septembre')
   # i = periode[2]
   # palette_couleur = mypalette
+  # ponderation ="no" # "yes" ou "no"
 
   # Fonctionnement par période
   for(i in periode){
@@ -616,8 +690,11 @@ fct_FAMD_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
 
     # # ajouter la dimension d'appartenance
     # merge(dt_stack, table_variables)
-
-    makeFAMD(dt_stack,i, dimension = "toutes", palette_couleur)
+    if(ponderation == "no"){
+      dimension = "ACP_sans_ponderation"
+    } else{dimension = "ACP_avec_ponderation"}
+    
+    makePCA(dt_stack,i, dimension = dimension, palette_couleur, ponderation)
 
   }
 }
@@ -647,7 +724,7 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
 }
 
 # Fonction pour faire une ACP sur les axes des FAMD de chaque dimensions
-ACP_axesFAMD <- function(mois, palette_couleur=mypalette){
+ACP_axesPCA <- function(mois, palette_couleur=mypalette){
 
   # # # TEST
   # mois = liste.mois[1]
@@ -657,7 +734,7 @@ ACP_axesFAMD <- function(mois, palette_couleur=mypalette){
 
   liste_axes = list.files(paste0(output_path,"/ACP/"),".tif", recursive = T, full.names = T)
   # Virer les axes issues de la FAMD globale
-  liste_axes = liste_axes[!grepl("toutes|ACP_FAMD|TEST",liste_axes)]
+  liste_axes = liste_axes[!grepl("toutes|ACP_AFDM|TEST",liste_axes)]
   # Garder le mois en cours
   liste_axes = liste_axes[grepl(mois,liste_axes)]
 
@@ -675,7 +752,7 @@ ACP_axesFAMD <- function(mois, palette_couleur=mypalette){
   # # ajouter la dimension d'appartenance
   # merge(dt_stack, table_variables)
 
-  makeFAMD(dt_stack, mois, dimension = "ACP_FAMD", palette_couleur)
+  makePCA(dt_stack, mois, dimension = "ACP_AFDM", palette_couleur)
 
 }
 
@@ -720,20 +797,27 @@ col_dim = merge(rbind(table_variables, table_variable_dummies), corresp_col,by.x
 mypalette <- setNames(col_dim$colour_dim, 
                       col_dim$Nom)
 
-##### FAMD/ACP par dimension par mois ####
-lapply(liste.dim, fct_FAMD)
+##### ACP par dimension par mois ####
+lapply(liste.dim, function(x) fct_PCA(x,
+                                 periode=c("mai",'juin','juillet','aout','septembre'),
+                                 palette_couleur=mypalette,
+                                 ponderation = "no")
+       )
 
 # sapply(liste.dim, fct_FAMD,arg_ACP="sans")
 #sapply(liste.dim, fct_FAMD,arg_ACP="avec")
 
-# # Relancer FAMD sur une dimension spécifique
-fct_FAMD("CA")
+# # # Relancer FAMD sur une dimension spécifique
+# fct_PCA(dimension = "CA")
 
 ##### FAMD sur toutes les dimensions simultanément, par mois ####
-fct_FAMD_all()
+fct_PCA_all(ponderation="yes")
+fct_PCA_all(ponderation="no")
 
-##### ACP sur axes FAMD des dimensions, par mois ####
-lapply(liste.mois, ACP_axesFAMD)
+##### ACP sur axes ACP des dimensions, par mois ####
+lapply(liste.mois, ACP_axesPCA)
+# TODO : tester cette fonction, ça ne devrait pas fonctionner
+# pas pas urgence de corriger ça
 
 
 ##### t-SNE par dimension par saison ####
@@ -1024,25 +1108,6 @@ ggplot(DATA, aes(x=V1,y=V2))+
 # 
 #   
 # }
-# # TODO : à tester : avoir sur un graph les variables avec les flèches ACP +
-# # en couleur les points des individus multiusage
-# head(tbl_FAMD_MU)
-# c(axe1,axe2,axe3,x,y,mois,sumUsage)
-# res.famd <- PCA(subset(tbl_FAMD_MU,select=-c(axe1,axe2,axe3,x,y,mois,sumUsage)), 
-#                  graph = FALSE, ncp = 3)
-# fviz_pca_var(res.famd, col.var = "cos2",
-#                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              select.var = list(cos2 = 0.5),
-#                             repel = T)
-# fviz_pca_var(res.famd, col.var = "cos2",
-#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              select.var = list(contrib = 10),
-#              repel = T)
-# # TROP long ..
-# fviz_pca_ind(res.famd, label="none", habillage=tbl_FAMD_MU$sumUsage,
-#              addEllipses=TRUE, ellipse.level=0.95,
-#              select.ind = list(cos = 5))
-# 
 
 
 
