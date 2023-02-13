@@ -2,14 +2,34 @@
 # Nom : Regroupement des variables à travers chaque dimension
 # Auteure : Perle Charlot
 # Date de création : 31-03-2022
-# Dates de modification : 18-10-2022
+# Dates de modification : 13-02-2023
 
 ### Librairies -------------------------------------
 
 library(raster)
 library(terra)
+library(data.table)
+library(stringr)
+library(tidyverse)
 
 ### Fonctions -------------------------------------
+
+# Permet de nettoyer les noms de colonnes (= variables) d'un dt
+cleanVarName <- function(liste_nom_var_ref, dt_to_clean){
+  # # TEST
+  # liste_nom_var_ref = table_variables$Nom
+  # dt_to_clean = test_dt
+  
+  noms_variables = names(dt_to_clean)[! names(dt_to_clean) %in% c("x","y")]
+  if(any(!noms_variables %in% liste_nom_var_ref)){
+    noms_bug = noms_variables[!noms_variables %in% liste_nom_var_ref]}
+  
+  for(i in liste_nom_var_ref){
+    if(any(grepl(i, noms_bug))){
+      names(dt_to_clean)[grepl(i, names(dt_to_clean))] = i
+    }}
+  return(dt_to_clean)
+}
 
 # Fonction qui vérifie que le raster ait le bon CRS et extent, et le modifie si besoin
 AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
@@ -31,8 +51,7 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
     raster.to.check <- projectRaster(raster.to.check, raster.ref)
     writeRaster(raster.to.check, path.raster.to.check, overwrite=TRUE)
     cat("\nRaster ", names(raster.to.check)," a été modifié et sauvegarde.")
-  }
-  
+  }else{cat("\nRaster conforme.")}
 }
 
 # Fonction qui crée une stack de variables par dimension et par saison
@@ -112,6 +131,66 @@ CreateStackDimSeason <- function(nom_dim, periode=c("mai","juin","juillet","aout
   
 }
 
+# Fonction qui crée une stack de variables (tous les mois confondus et dim confondues)
+# nécéssite d'avoir au préalable fait tourner CreateStackDimSeason
+CreateGlobalStack <- function(list_dims, periode){
+  # # TEST
+  # list_dims = c("CA","B","PV","CS","D","I")
+  # periode = c("mai","juin","juillet","aout","septembre")
+  
+# vérifier que CreateStackDimSeason a bien tourné
+  length_dirs <- length(list.dirs(paste0(output_path,"/stack_dim/"),recursive=F))
+  length_dims <- length(list_dims)
+  
+  try(if(length_dims != length_dirs) stop("You must run CreateStackDimSeason function before.\n"))
+  
+  # Créer espace de stockage
+  if(!dir.exists(paste0(output_path,"/stack_dim_global/")))
+  {dir.create(paste0(output_path,"/stack_dim_global/"),recursive = T)}
+  
+  # 1 - rbind de chaque stack mensuelle, par dimension
+  rbindDim <- function(dim_to_rbind, periode=periode){
+    # #TEST
+    # dim_to_rbind = "B"
+    
+    # Charger des stacks de la dimension en cours
+    path = paste0(output_path, "/stack_dim/",dim_to_rbind,"/")
+    path_months = lapply(periode,function(x) paste0(path,x))
+    path_stack_months = list.files(unlist(path_months),recursive=T, ".tif$|.TIF", full.names = T)
+    # S'assurer de la conformité des variables
+    lapply(path_stack_months, AjustExtCRS)
+    liste_stacks = lapply(path_stack_months, stack)
+    liste_dt_stacks = lapply(liste_stacks, function(x) as.data.frame(data.table(as.data.frame(x))))
+    coords = coordinates(liste_stacks[[1]])
+    liste_dt_stacks = lapply(liste_dt_stacks, function(x) cbind(coords, x))
+    # Ajouter une colonne mois
+    periode_reord = periode[order(periode)]
+    for(i in 1:length(liste_dt_stacks)){
+      liste_dt_stacks[[i]] = cbind(liste_dt_stacks[[i]],month=rep(periode_reord[i],dim(liste_dt_stacks[[i]])[1]))
+    }
+    # S'assurer qu'il y ait les bons noms de colonnes
+    liste_dt_stacks = lapply(liste_dt_stacks, function(x) cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+                                                     dt_to_clean = x))
+    # rbind sur tous les mois
+    dt_stacks =  do.call(rbind, liste_dt_stacks)
+    cat(paste0("Dimension ", dim_to_rbind," traitée.\n"))
+    return(dt_stacks)
+  }
+  dfs_dim_rbind = lapply(list_dims, function(x) rbindDim(x, periode))
+  # 2 - merge de toutes les stacks, by x,y,month
+  dt_env_periode = dfs_dim_rbind  %>% reduce(left_join, by = c("x","y","month"))
+  # Nan <- Na
+  dt_env_periode[is.na(dt_env_periode)] = NA
+  # Vérifier la nature des variables (si qualitative, coder en facteur)
+  extr_tb = table_variables[table_variables$Nom %in% names(dt_env_periode), ]
+  liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
+  dt_env_periode[liste_nom_var_quali] <- lapply(dt_env_periode[liste_nom_var_quali] , factor)
+  # Passer la variable mois en facteur
+  dt_env_periode$month <- as.factor(dt_env_periode$month)
+  # sauvegarde df
+  write.csv(dt_env_periode, paste0(output_path,"/stack_dim_global/data_env_5months.csv"))
+}
+
 ### Constantes -------------------------------------
 
 # Espace de travail
@@ -136,11 +215,11 @@ chemin_mnt <- paste0(dos_var_sp ,"/Milieux/IGN/mnt_25m_belledonne_cale.tif")
 path_table_variables <- paste0(input_path,"/liste_variables.csv")
 
 ### Programme -------------------------------------
-
 table_variables <- fread(path_table_variables)
 
 # Stack des variables par dimension et par saison
 lapply(liste_dimensions,CreateStackDimSeason)
 
-# # # # Refaire la stack de CA en gardant toutes les vars
-# CreateStackDimSeason("CS")
+# une stack globale (à travers toutes les dimensions et les mois)
+CreateGlobalStack(list_dims = liste_dimensions,
+                  periode = c("mai","juin","juillet","aout","septembre"))
