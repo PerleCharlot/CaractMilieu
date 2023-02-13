@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 30-01-2023
+# Dates de modification : 13-02-2023
 
 ### Librairies -------------------------------------
 
@@ -18,6 +18,23 @@ library(sjmisc)
 library(fastDummies)
 ### Fonctions -------------------------------------
 
+# Permet de nettoyer les noms de colonnes (= variables) d'un dt
+cleanVarName <- function(liste_nom_var_ref, dt_to_clean){
+  # # TEST
+  # liste_nom_var_ref = table_variables$Nom
+  # dt_to_clean = test_dt
+  
+  noms_variables = names(dt_to_clean)[! names(dt_to_clean) %in% c("x","y")]
+  if(any(!noms_variables %in% liste_nom_var_ref)){
+    noms_bug = noms_variables[!noms_variables %in% liste_nom_var_ref]}
+  
+  for(i in liste_nom_var_ref){
+    if(any(grepl(i, noms_bug))){
+      names(dt_to_clean)[grepl(i, names(dt_to_clean))] = i
+    }}
+  return(dt_to_clean)
+}
+
 # Fonction qui calcule une ACP, pour une dimension, pour une saison
 makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderation){
   # # TEST
@@ -25,6 +42,14 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # saison = i
   # # dimension = "CA"
   # # palette_couleur = mypalette
+  
+  
+  # # TEST
+  # table_donnees = dt_stack
+  # saison = "summer"
+  # dimension = "ACP_sans_ponderation"
+  # palette_couleur = mypalette
+  # ponderation = "no"
   
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
@@ -58,9 +83,6 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     palette_couleur <- setNames(a$colour_dim,
                           a$axe_AFDM)
   }
-
-  # Retirer x et y
-  tbl_data = subset(table_donnees,select=-c(x,y))
 
   # ### UTILITE DE CE CHUNK ?? pas vu pour dimension == "toutes"
   # # Recoder les variables factorielles (pour ne pas qu'il y ait de doublons)
@@ -97,19 +119,25 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   #   type = "FAMD"
   # }
 
+  # # Retirer x et y
+  # tbl_data = subset(table_donnees,select=-c(x,y))
+  tbl_data = dt_stack
   
+  # Identifier index vars à rendre booléennes
+  extr_tb = table_variables[table_variables$Nom %in% names(tbl_data), ]
+  names_var_quali =  extr_tb$Nom[which(extr_tb$Nature == "qualitative")] 
+
   # Check for dummies variables
   t = try(dummy_cols(tbl_data, remove_selected_columns=T), silent = TRUE)
   if(inherits(t, "try-error")) {
     tbl_data2 <- tbl_data
     df_w = table_variables[table_variables$Nom %in% names(tbl_data2)]
-
   } else {   
     # Transformer factoriel (ordi et quali) en boolean (0/1)
-    tbl_data2 <- dummy_cols(tbl_data,
-                                     remove_selected_columns=T)
+    tbl_data2 <- dummy_cols(tbl_data, 
+                            select_columns=names_var_quali,
+                            remove_selected_columns=T)
     
-    #str(tbl_data2)
     # Matrice de pondération des variables dans ACP par dimension
     df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
     df_quanti = table_variables[table_variables$Nom %in% names(tbl_data2)]
@@ -134,15 +162,27 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   }
   #Ordonner les poids
   W = df_w$weight[match(names(tbl_data2), df_w$Nom)]
-  #sum(W)
+  #sum(na.omit(W))
+  W[is.na(W)] <- 0
+  
+  
+  # Plutot que les retirer, les considérer en vars supplémentaires
+  if(saison == "summer"){
+    idx_vars_quali_sup = grep("^month$", names(tbl_data2))
+  } 
+  idx_vars_quanti_sup = c(grep("^x$", names(tbl_data2)),grep("^y$", names(tbl_data2)))
   
   # PCA
   res.pca <- PCA(tbl_data2,
                    ncp=7,
                    col.w = W, # avec ou sans pondération (par dimension)
                    graph = FALSE,
-                 scale.unit = TRUE) # data are scaled to unit variance
+                 scale.unit = TRUE, # data are scaled to unit variance
+                 quali.sup =  ifelse(exists('idx_vars_quali_sup'),idx_vars_quali_sup,NULL),
+                 quanti.sup = idx_vars_quanti_sup
+                   ) 
 
+  cat("ACP calculée.\n")
   # % variance expliquée par axe
   liste_variance_expl = round(res.pca$eig[,2],1) # quand il y a peu de var
   n_ncp = length(liste_variance_expl)
@@ -382,6 +422,8 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
                               font.x=c(28,"plain","black"),
                               font.y=c(28,"plain","black"),
                               font.tickslab = c(28,"plain","black"),
+                            # habillage = ifelse(saison == "summer",c(tbl_data2$month),NULL),
+                            habillage = ifelse(exists("idx_vars_quali_sup"),idx_vars_quali_sup,NULL),
                               repel = FALSE)
 
   # Sauvegarde des graphiques en format images
@@ -425,17 +467,18 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   p6 = graph_ind
   p7 = p5 | p6
   
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
-      width=1400, height=800)
-  plot(p7)
-  dev.off()
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/cercle_correlation_axe1_2_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p5)
   dev.off()
+  cat("graph cercle corrélation axes 1 et 2 calculé.\n")
   png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_individus_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p6)
+  dev.off()
+  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
+      width=1400, height=800)
+  plot(p7)
   dev.off()
 
   # valeurs des axes, par pixels
@@ -552,33 +595,34 @@ fct_PCA <- function(dimension,
     # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
     dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
     # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
-
-    # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
-    noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
-    if(any(!noms_variables %in% table_variables$Nom)){
-      noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
-      cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
-      # A la mano
-      if(any(grepl("temps_acces", noms_bug))){
-        names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
-      }
-      if(any(grepl("abondance_feuillage", noms_bug))){
-        names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
-      }
-      if(any(grepl("NDVI", noms_bug))){
-        names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
-      }
-      if(any(grepl("P_ETP", noms_bug))){
-        names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
-      }
-      if(any(grepl("ht_physio_max", noms_bug))){
-        names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
-      }
-      if(any(grepl("diffT__dif_tmean", noms_bug))){
-        names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
-      }
-    }
-
+    dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+                 dt_to_clean = dt_stack)
+    # # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
+    # noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
+    # if(any(!noms_variables %in% table_variables$Nom)){
+    #   noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
+    #   cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
+    #   # A la mano
+    #   if(any(grepl("temps_acces", noms_bug))){
+    #     names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
+    #   }
+    #   if(any(grepl("abondance_feuillage", noms_bug))){
+    #     names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
+    #   }
+    #   if(any(grepl("NDVI", noms_bug))){
+    #     names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
+    #   }
+    #   if(any(grepl("P_ETP", noms_bug))){
+    #     names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
+    #   }
+    #   if(any(grepl("ht_physio_max", noms_bug))){
+    #     names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
+    #   }
+    #   if(any(grepl("diffT__dif_tmean", noms_bug))){
+    #     names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
+    #   }
+    # }
+    
     # Vérifier la nature des variables (si qualitative, coder en facteur)
     extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
     liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
@@ -655,31 +699,35 @@ fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
     dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
     # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
 
-    # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
-    noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
-    if(any(!noms_variables %in% table_variables$Nom)){
-      noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
-      cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
-      # A la mano
-      if(any(grepl("temps_acces", noms_bug))){
-        names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
-      }
-      if(any(grepl("abondance_feuillage", noms_bug))){
-        names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
-      }
-      if(any(grepl("NDVI", noms_bug))){
-        names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
-      }
-      if(any(grepl("P_ETP", noms_bug))){
-        names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
-      }
-      if(any(grepl("ht_physio_max", noms_bug))){
-        names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
-      }
-      if(any(grepl("diffT__dif_tmean", noms_bug))){
-        names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
-      }
-    }
+    # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
+    dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+                             dt_to_clean = dt_stack)
+    
+    # # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
+    # noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
+    # if(any(!noms_variables %in% table_variables$Nom)){
+    #   noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
+    #   cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
+    #   # A la mano
+    #   if(any(grepl("temps_acces", noms_bug))){
+    #     names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
+    #   }
+    #   if(any(grepl("abondance_feuillage", noms_bug))){
+    #     names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
+    #   }
+    #   if(any(grepl("NDVI", noms_bug))){
+    #     names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
+    #   }
+    #   if(any(grepl("P_ETP", noms_bug))){
+    #     names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
+    #   }
+    #   if(any(grepl("ht_physio_max", noms_bug))){
+    #     names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
+    #   }
+    #   if(any(grepl("diffT__dif_tmean", noms_bug))){
+    #     names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
+    #   }
+    # }
 
     # Vérifier la nature des variables (si qualitative, coder en facteur)
     extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
@@ -796,6 +844,32 @@ table_variable_dummies <- fread(path_table_variables_dummies, dec=",")
 col_dim = merge(rbind(table_variables, table_variable_dummies), corresp_col,by.x="Dimension", by.y="dim_name")
 mypalette <- setNames(col_dim$colour_dim, 
                       col_dim$Nom)
+
+##### ACP globale : toutes les dimensions + tous les mois ####
+dt_stack <- fread(paste0(output_path, "/stack_dim_global/data_env_5months.csv"),drop="V1")
+dt_stack <- as.data.frame(dt_stack[complete.cases(dt_stack),]) #1 056 000 obs -> 249 690 obs
+# Vérifier la nature des variables (si qualitative, coder en facteur)
+extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
+liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
+dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
+str(dt_stack)
+
+# Ici, j'ai agrégé toutes les valeurs à travers les mois
+makePCA(table_donnees = dt_stack,
+        saison="summer", 
+        dimension="ACP_sans_ponderation",
+        palette_couleur = mypalette, 
+        ponderation = "no")
+
+makePCA(table_donnees = dt_stack,
+        saison="summer", 
+        dimension="ACP_avec_ponderation",
+        palette_couleur = mypalette, 
+        ponderation = "yes")
+
+# TODO : faire une ACP sur 1 mois
+# puis la projeter sur les autres mois
+# faire une fonction dédiée
 
 ##### ACP par dimension par mois ####
 lapply(liste.dim, function(x) fct_PCA(x,
