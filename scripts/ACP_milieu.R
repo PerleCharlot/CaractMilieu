@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 13-02-2023
+# Dates de modification : 14-02-2023
 
 ### Librairies -------------------------------------
 
@@ -36,12 +36,11 @@ cleanVarName <- function(liste_nom_var_ref, dt_to_clean){
 }
 
 # Fonction qui calcule une ACP, pour une dimension, pour une saison
-makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderation){
+makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderation,predict = FALSE){
   # # TEST
   # table_donnees = dt_stack
   # saison = i
-  # # dimension = "CA"
-  # # palette_couleur = mypalette
+  # palette_couleur = mypalette
   
   
   # # TEST
@@ -50,6 +49,13 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # dimension = "ACP_sans_ponderation"
   # palette_couleur = mypalette
   # ponderation = "no"
+  
+  # table_donnees = dt_stack
+  # saison="summer"
+  # dimension="ACP_sans_ponderation"
+  # palette_couleur = mypalette
+  # ponderation = "no"
+  
   
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
@@ -65,9 +71,13 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   dim_col = corresp_col$colour_dim[which(corresp_col$dim_name == dimension)]
 
   # Création et Sauvegarde des graphiques
-  # Pour rmd, sauvegarde plots seuls
-  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd")))
+  if(predict){
+    if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"_fromPCAjune/plot_rmd")))
+    { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"_fromPCAjune/plot_rmd"),recursive = T)}
+  } else{
+    if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd")))
     { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"),recursive = T)}
+  }
   
   # Pour dimension = ACP_AFDM (qui maintenant est une ACP d'ACP ...)
   if(dimension == "ACP_AFDM"){
@@ -108,19 +118,6 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # names(tbl_data)[grep("_rec",names(tbl_data))] <- new_names
   # ### UTILITE DE CE CHUNK ?? pas vu pour dimension == "toutes"
   
-  # # stop trying FAMD bc cannot weight by column
-  # t = try(FAMD(tbl_data , graph = FALSE))
-  # if(inherits(t, "try-error")) {
-  #   # PCA si seulement quanti
-  #   res.famd <- PCA(tbl_data , graph = FALSE)
-  #   type = "PCA"
-  # } else{  # FAMD si miste quali/quanti
-  #   res.famd <- FAMD(tbl_data , graph = FALSE)
-  #   type = "FAMD"
-  # }
-
-  # # Retirer x et y
-  # tbl_data = subset(table_donnees,select=-c(x,y))
   tbl_data = dt_stack
   
   # Identifier index vars à rendre booléennes
@@ -165,24 +162,41 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   #sum(na.omit(W))
   W[is.na(W)] <- 0
   
-  
   # Plutot que les retirer, les considérer en vars supplémentaires
   if(saison == "summer"){
     idx_vars_quali_sup = grep("^month$", names(tbl_data2))
-  } 
+  } else{
+    idx_vars_quali_sup = NULL
+  }
   idx_vars_quanti_sup = c(grep("^x$", names(tbl_data2)),grep("^y$", names(tbl_data2)))
   
   # PCA
-  res.pca <- PCA(tbl_data2,
+  if(predict){
+    load(paste0(output_path,"/ACP/",dimension,"/06juin/PCA.rdata"))
+    cat("ACP de juin chargée.\n")
+    tbl_data3 <- tbl_data2
+    a = predict.PCA(object = res.pca, newdata =  tbl_data3)
+    PCA_tbl <- as.data.frame(a$coord)
+    names(PCA_tbl) = paste0("axe",seq(1:length(colnames(PCA_tbl))))
+    table_all <- cbind(table_donnees,PCA_tbl)
+    write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/tblPCA_",dimension,"_",saison,".csv"))
+  } else{
+    tbl_data3 <- tbl_data2 %>% select(-idx_vars_quali_sup,-idx_vars_quanti_sup)
+    W = W[-c(idx_vars_quali_sup,idx_vars_quanti_sup)]
+    
+    res.pca <- PCA(tbl_data3,
                    ncp=7,
                    col.w = W, # avec ou sans pondération (par dimension)
                    graph = FALSE,
-                 scale.unit = TRUE, # data are scaled to unit variance
-                 quali.sup =  ifelse(exists('idx_vars_quali_sup'),idx_vars_quali_sup,NULL),
-                 quanti.sup = idx_vars_quanti_sup
-                   ) 
+                   scale.unit = TRUE, # data are scaled to unit variance
+                   #quali.sup =  idx_vars_quali_sup, 
+                   #quanti.sup = idx_vars_quanti_sup
+    ) 
+    cat("ACP calculée.\n")
+    # mettre des variables supplémentaires fait énormément baisser
+    # la variance expliquée 
+  
 
-  cat("ACP calculée.\n")
   # % variance expliquée par axe
   liste_variance_expl = round(res.pca$eig[,2],1) # quand il y a peu de var
   n_ncp = length(liste_variance_expl)
@@ -275,105 +289,6 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     print(graph_var_2_3)
     dev.off()
   }
-
-  # if(type == "FAMD"){
-  # 
-  #   t = try(fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-  #                         geom=c("arrow","text"),
-  #                         font.x=c(24,"plain","black"),
-  #                         font.y=c(24,"plain","black"),
-  #                         font.tickslab = c(24,"plain","black"),
-  #                         labelsize=8,
-  #                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                         repel = TRUE))
-  #   if(inherits(t, "try-error")) {
-  #     # trop peu de vars quanti
-  #   } else{
-  #     n_vars = length(res.famd$quanti.var$contrib[,1])
-  # 
-  #     graph_var_quanti_12 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-  #                                          geom=c("arrow","text"),
-  #                                          select.var = list(contrib = n_vars/1.5, cos2=0.2),#2/3 des vars
-  #                                          font.x=c(24,"plain","black"),
-  #                                          font.y=c(24,"plain","black"),
-  #                                          font.tickslab = c(24,"plain","black"),
-  #                                          labelsize=8,
-  #                                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                                          repel = TRUE)
-  #     graph_var_quanti_23 <- fviz_famd_var(res.famd, "quanti.var", col.var = "cos2",
-  #                                          geom=c("arrow","text"),
-  #                                          axes = c(2, 3),
-  #                                          select.var = list(contrib = n_vars/1.5, cos2=0.2),
-  #                                          font.x=c(24,"plain","black"),
-  #                                          font.y=c(24,"plain","black"),
-  #                                          font.tickslab = c(24,"plain","black"),
-  #                                          labelsize=8,
-  #                                          gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                                          repel = TRUE)
-  # 
-  #     p8a = graph_var_quanti_12
-  #     p8b = graph_var_quanti_23
-  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes1_2_",dimension,"_",saison,".png"),
-  #         width=1000, height=800)
-  #     print(p8a)
-  #     dev.off()
-  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quanti_axes2_3_",dimension,"_",saison,".png"),
-  #         width=1000, height=800)
-  #     print(p8b)
-  #     dev.off()
-  #   }
-  # 
-  #   t = try(fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
-  #                         geom=c("arrow","text"),
-  #                         font.x=c(24,"plain","black"),
-  #                         font.y=c(24,"plain","black"),
-  #                         font.tickslab = c(24,"plain","black"),
-  #                         labelsize=8,
-  #                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                         repel = TRUE))
-  #   if(inherits(t, "try-error")) {
-  #     # trop peu de vars quali
-  #   } else {
-  #     n_vars = length(res.famd$quali.var$contrib[,1])
-  #     graph_var_quali_12 <- fviz_famd_var(res.famd, "quali.var", col.var = "cos2",
-  #                                         geom=c("arrow","text"),
-  #                                         font.x=c(24,"plain","black"),
-  #                                         font.y=c(24,"plain","black"),
-  #                                         font.tickslab = c(24,"plain","black"),
-  #                                         labelsize=8,
-  #                                         select.var = list(contrib = n_vars/1.5, cos2=0.2),
-  #                                         gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                                         repel = TRUE)
-  #     if(length(liste_variance_expl)>2){
-  #       graph_var_quali_23 <- fviz_famd_var(res.famd, "quali.var",
-  #                                           col.var = "cos2",
-  #                                           geom=c("arrow","text"),
-  #                                           axes = c(2, 3),
-  #                                           font.x=c(24,"plain","black"),
-  #                                           font.y=c(24,"plain","black"),
-  #                                           font.tickslab = c(24,"plain","black"),
-  #                                           labelsize=8,
-  #                                           select.var = list(contrib = n_vars/1.5, cos2=0.1),
-  #                                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-  #                                           repel = TRUE)
-  #       p9b = graph_var_quali_23
-  #       png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes2_3_",dimension,"_",saison,".png"),
-  #           width=1000, height=800)
-  #       print(p9b)
-  #       dev.off()
-  #       }
-  # 
-  #     p9a = graph_var_quali_12
-  # 
-  #     png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_var_quali_axes1_2_",dimension,"_",saison,".png"),
-  #         width=1000, height=800)
-  #     print(p9a)
-  #     dev.off()
-  # 
-  # 
-  #   }
-  # }
-    
   # Colorer les barres par dimension
   nb_vars_grap = ifelse(n_ncp == 7,15,n_ncp)
   titre_graph_eboul = ifelse(nb_vars_grap == 15,"Eboulis des valeurs propres (15 variables contribuant le plus)",
@@ -423,7 +338,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
                               font.y=c(28,"plain","black"),
                               font.tickslab = c(28,"plain","black"),
                             # habillage = ifelse(saison == "summer",c(tbl_data2$month),NULL),
-                            habillage = ifelse(exists("idx_vars_quali_sup"),idx_vars_quali_sup,NULL),
+                            #habillage = ifelse(length(idx_vars_quali_sup) == 0, "none",idx_vars_quali_sup),
                               repel = FALSE)
 
   # Sauvegarde des graphiques en format images
@@ -549,9 +464,13 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     
   }else{# sauvegarde brick pour visualiser en multiband sur QGIS
     writeRaster(stack(rast_axe1), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)}
+  
+  # Sauvegarde transfo ACP pour l'appliquer sur d'autres mois
+  save(res.pca, file = paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/PCA.rdata"))
+  }
   }
 
-# fonction qui fait tout ...
+# fonction qui lance PCA sur une dimension
 fct_PCA <- function(dimension,
                      # arg_ACP,
                      periode=c("mai",'juin','juillet','aout','septembre'),
@@ -662,15 +581,17 @@ fct_PCA <- function(dimension,
 }
 
 
-# fonction FAMD sur toutes les variables en meme temps
+# fonction qui lance PCA sur toutes les variables en meme temps
 fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
-                         palette_couleur=mypalette, ponderation){
+                         palette_couleur=mypalette, ponderation,
+                        predict = FALSE){
 
   # # # TEST
-  # periode = c("mai",'juin','juillet','aout','septembre')
-  # i = periode[2]
+  # periode = 'juillet'
+  # i = periode[1]
   # palette_couleur = mypalette
   # ponderation ="no" # "yes" ou "no"
+  # predict= TRUE
 
   # Fonctionnement par période
   for(i in periode){
@@ -698,52 +619,24 @@ fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
     # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
     dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
     # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
-
-    # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
     dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
                              dt_to_clean = dt_stack)
-    
-    # # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
-    # noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
-    # if(any(!noms_variables %in% table_variables$Nom)){
-    #   noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
-    #   cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
-    #   # A la mano
-    #   if(any(grepl("temps_acces", noms_bug))){
-    #     names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
-    #   }
-    #   if(any(grepl("abondance_feuillage", noms_bug))){
-    #     names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
-    #   }
-    #   if(any(grepl("NDVI", noms_bug))){
-    #     names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
-    #   }
-    #   if(any(grepl("P_ETP", noms_bug))){
-    #     names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
-    #   }
-    #   if(any(grepl("ht_physio_max", noms_bug))){
-    #     names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
-    #   }
-    #   if(any(grepl("diffT__dif_tmean", noms_bug))){
-    #     names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
-    #   }
-    # }
-
     # Vérifier la nature des variables (si qualitative, coder en facteur)
     extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
     liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
     dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
     cat(paste0("\nPréparation table des variables pour le mois de ",i," effectuée.\n"))
-    #str(dt_stack)
-
     # # ajouter la dimension d'appartenance
-    # merge(dt_stack, table_variables)
     if(ponderation == "no"){
       dimension = "ACP_sans_ponderation"
     } else{dimension = "ACP_avec_ponderation"}
-    
-    makePCA(dt_stack,i, dimension = dimension, palette_couleur, ponderation)
-
+    # Faire tourner l'ACP
+    makePCA(table_donnees =  dt_stack,
+            saison = i, 
+            dimension = dimension, 
+            palette_couleur = palette_couleur, 
+            ponderation = ponderation,
+            predict = predict)
   }
 }
 
@@ -854,6 +747,7 @@ liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
 dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
 str(dt_stack)
 
+# TODO : refaire ces deux fonctions car bug
 # Ici, j'ai agrégé toutes les valeurs à travers les mois
 makePCA(table_donnees = dt_stack,
         saison="summer", 
@@ -871,12 +765,16 @@ makePCA(table_donnees = dt_stack,
 # puis la projeter sur les autres mois
 # faire une fonction dédiée
 
+fct_PCA_all(ponderation="no",periode='juin')
+
 ##### ACP par dimension par mois ####
 lapply(liste.dim, function(x) fct_PCA(x,
                                  periode=c("mai",'juin','juillet','aout','septembre'),
                                  palette_couleur=mypalette,
                                  ponderation = "no")
        )
+
+
 
 # sapply(liste.dim, fct_FAMD,arg_ACP="sans")
 #sapply(liste.dim, fct_FAMD,arg_ACP="avec")
@@ -894,17 +792,17 @@ lapply(liste.mois, ACP_axesPCA)
 # pas pas urgence de corriger ça
 
 
-##### t-SNE par dimension par saison ####
-library(Rtsne)
-# stack_matrix <- as.matrix(dt_stack[,1:21])
-# Set a seed if you want reproducible results
-set.seed(42)
-tsne_out <- Rtsne(dt_stack[,1:21],partial_pca=T) # Run TSNE
-# Show the objects in the 2D tsne representation
-plot(tsne_out$Y, asp=0,alpha=0.1)
-DATA = as.data.frame(tsne_out$Y)
-ggplot(DATA, aes(x=V1,y=V2))+
-  geom_point(alpha=0.05)
+# ##### t-SNE par dimension par saison ####
+# library(Rtsne)
+# # stack_matrix <- as.matrix(dt_stack[,1:21])
+# # Set a seed if you want reproducible results
+# set.seed(42)
+# tsne_out <- Rtsne(dt_stack[,1:21],partial_pca=T) # Run TSNE
+# # Show the objects in the 2D tsne representation
+# plot(tsne_out$Y, asp=0,alpha=0.1)
+# DATA = as.data.frame(tsne_out$Y)
+# ggplot(DATA, aes(x=V1,y=V2))+
+#   geom_point(alpha=0.05)
 
 ##### Niche de chaque usage ####
 
