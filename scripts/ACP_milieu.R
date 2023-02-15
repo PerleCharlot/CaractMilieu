@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 14-02-2023
+# Dates de modification : 15-02-2023
 
 ### Librairies -------------------------------------
 
@@ -26,36 +26,24 @@ cleanVarName <- function(liste_nom_var_ref, dt_to_clean){
   
   noms_variables = names(dt_to_clean)[! names(dt_to_clean) %in% c("x","y")]
   if(any(!noms_variables %in% liste_nom_var_ref)){
-    noms_bug = noms_variables[!noms_variables %in% liste_nom_var_ref]}
-  
-  for(i in liste_nom_var_ref){
-    if(any(grepl(i, noms_bug))){
-      names(dt_to_clean)[grepl(i, names(dt_to_clean))] = i
-    }}
+    noms_bug = noms_variables[!noms_variables %in% liste_nom_var_ref]
+    
+    for(i in liste_nom_var_ref){
+      if(any(grepl(i, noms_bug))){
+        names(dt_to_clean)[grepl(i, names(dt_to_clean))] = i
+      }}
+    }
   return(dt_to_clean)
 }
 
 # Fonction qui calcule une ACP, pour une dimension, pour une saison
 makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderation,predict = FALSE){
-  # # TEST
-  # table_donnees = dt_stack
-  # saison = i
-  # palette_couleur = mypalette
-  
-  
-  # # TEST
-  # table_donnees = dt_stack
+  # # # TEST
+  # table_donnees = dt_stacks
   # saison = "summer"
-  # dimension = "ACP_sans_ponderation"
-  # palette_couleur = mypalette
-  # ponderation = "no"
-  
-  # table_donnees = dt_stack
-  # saison="summer"
-  # dimension="ACP_sans_ponderation"
-  # palette_couleur = mypalette
-  # ponderation = "no"
-  
+  # dimension = dimension
+  # palette_couleur = palette_couleur
+  # ponderation = ponderation
   
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
@@ -70,17 +58,23 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   
   dim_col = corresp_col$colour_dim[which(corresp_col$dim_name == dimension)]
 
+  
+  if(ponderation){pond_att = "avec"}else{pond_att= "sans"}
+  
+  chemin_output_ACP = paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/",pond_att,"_ponderation/")
+  chemin_output_ACP_plot_rmd = paste0(chemin_output_ACP,"/plot_rmd")
+  
   # Création et Sauvegarde des graphiques
   if(predict){
     if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"_fromPCAjune/plot_rmd")))
     { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"_fromPCAjune/plot_rmd"),recursive = T)}
   } else{
-    if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd")))
-    { dir.create(paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd"),recursive = T)}
+    if(!dir.exists(chemin_output_ACP_plot_rmd))
+    { dir.create(chemin_output_ACP_plot_rmd,recursive = T)}
   }
   
-  # Pour dimension = ACP_AFDM (qui maintenant est une ACP d'ACP ...)
-  if(dimension == "ACP_AFDM"){
+  # Pour dimension = ACP_ACP (qui maintenant est une ACP d'ACP ...)
+  if(dimension == "ACP_ACP"){
     corresp_axes = data.frame(axe_AFDM =c(paste0("axe1_B_",saison),paste0("axe2_B_",saison) ,paste0("axe3_B_",saison),
                                           paste0("axe1_CA_",saison), paste0("axe2_CA_",saison), paste0("axe3_CA_",saison),
                                           paste0("axe1_CS_",saison), paste0("axe2_CS_",saison) ,paste0("axe3_CS_",saison),
@@ -145,29 +139,28 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # Mais on peut ensuite pondérer les variables par dimension 
   # (afin de donner un poids égale à chaque dimension)
   
-  if(ponderation == "yes"){
+  if(ponderation){
     cat("Analyse factorielle en composantes principales - avec pondération par dimension. \n")
     df_w$weight = (1/df_w$b) * (1/df_w$n) * (1/df_w$D)
-  }
-  
-  if(ponderation == "no"){
+  } else {
     cat("Analyse factorielle en composantes principales - sans pondération par dimension. \n")
     if(dimension == "ACP_sans_ponderation"){
       df_w$weight  =(1/df_w$b)* (1/length(tbl_data))
     } else{df_w$weight = (1/df_w$b)* (1/df_w$n) # fonctionne pour ACP sur une dimension
     }
   }
+
   #Ordonner les poids
   W = df_w$weight[match(names(tbl_data2), df_w$Nom)]
   #sum(na.omit(W))
   W[is.na(W)] <- 0
   
   # Plutot que les retirer, les considérer en vars supplémentaires
-  if(saison == "summer"){
+  
+  idx_vars_quali_sup = grep("^month$", names(tbl_data2))
+  if(length(idx_vars_quali_sup) > 0){
     idx_vars_quali_sup = grep("^month$", names(tbl_data2))
-  } else{
-    idx_vars_quali_sup = NULL
-  }
+  } else{idx_vars_quali_sup = NULL}
   idx_vars_quanti_sup = c(grep("^x$", names(tbl_data2)),grep("^y$", names(tbl_data2)))
   
   # PCA
@@ -181,7 +174,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     table_all <- cbind(table_donnees,PCA_tbl)
     write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/tblPCA_",dimension,"_",saison,".csv"))
   } else{
-    tbl_data3 <- tbl_data2 %>% select(-idx_vars_quali_sup,-idx_vars_quanti_sup)
+    tbl_data3 <- tbl_data2 %>% dplyr::select(-idx_vars_quali_sup,-idx_vars_quanti_sup)
     W = W[-c(idx_vars_quali_sup,idx_vars_quanti_sup)]
     
     res.pca <- PCA(tbl_data3,
@@ -281,10 +274,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
                                   habillage="none",
                                   repel = TRUE)
     
-    png(file=paste0(output_path,
-                    "/ACP/",dimension,
-                    "/",num_saison,saison,
-                    "/plot_rmd/cercle_correlation_axes2_3_",dimension,"_",saison,".png"),
+    png(file=paste0(chemin_output_ACP_plot_rmd,"/cercle_correlation_axes2_3_",dimension,"_",saison,".png"),
         width=1000, height=800)
     print(graph_var_2_3)
     dev.off()
@@ -344,25 +334,26 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # Sauvegarde des graphiques en format images
   p1 = graph_var_expl
   p2 = graph_contrib_var_axe1
+
   
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/eboulis_variance_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP_plot_rmd,"/eboulis_variance_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p1)
   dev.off()
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe1_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP_plot_rmd,"/contrib_axe1_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p2)
   dev.off()
   
   if(n_ncp>3){
     p3 = graph_contrib_var_axe2
-    png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe2_",dimension,"_",saison,".png"),
+    png(file=paste0(chemin_output_ACP_plot_rmd,"/contrib_axe2_",dimension,"_",saison,".png"),
         width=1000, height=800)
     plot(p3)
     dev.off()
     
     p3bis = graph_contrib_var_axe3
-    png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/contrib_axe3_",dimension,"_",saison,".png"),
+    png(file=paste0(chemin_output_ACP_plot_rmd,"/contrib_axe3_",dimension,"_",saison,".png"),
         width=1000, height=800)
     plot(p3bis)
     dev.off()
@@ -373,7 +364,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     p4 = p1 / (p2)
   } else { p4 = p1 / (p2 | p3)}
   
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/contrib_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP,"/contrib_",dimension,"_",saison,".png"),
       width=1400, height=800)
   plot(p4)
   dev.off()
@@ -382,16 +373,16 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   p6 = graph_ind
   p7 = p5 | p6
   
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/cercle_correlation_axe1_2_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP_plot_rmd,"/cercle_correlation_axe1_2_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p5)
   dev.off()
   cat("graph cercle corrélation axes 1 et 2 calculé.\n")
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/plot_rmd/graph_individus_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP_plot_rmd,"/graph_individus_",dimension,"_",saison,".png"),
       width=1000, height=800)
   plot(p6)
   dev.off()
-  png(file=paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/graph_",dimension,"_",saison,".png"),
+  png(file=paste0(chemin_output_ACP,"/graph_",dimension,"_",saison,".png"),
       width=1400, height=800)
   plot(p7)
   dev.off()
@@ -401,9 +392,9 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   PCA_tbl <- as.data.frame(res.pca$ind$coord)
   names(PCA_tbl) = paste0("axe",seq(1:length(colnames(PCA_tbl))))
   table_all <- cbind(table_donnees,PCA_tbl)
-  write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/tblPCA_",dimension,"_",saison,".csv"))
+  write.csv(table_all, paste0(chemin_output_ACP,"/tblPCA_",dimension,"_",saison,".csv"))
 
-  # Création des rasters des axes 1, 2 et 3 de la FAMD
+  # Composantes principales en rasters
   ref = raster(chemin_mnt)
   ExtCRS <- function(raster_to_check, raster_ref = ref){
     # #TEST
@@ -415,230 +406,130 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     sameExtent <- (ext.to.check == extent(raster_ref))
     if(any(!sameCRS,!sameExtent)) {
       raster_to_check <- projectRaster(raster_to_check, raster_ref)
-      cat("\nRaster", names(raster_to_check),"a été modifié et sauvegardé.")
     }
     return(raster_to_check)
   }
-  
-  rast_axe1 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe1), crs=EPSG_2154)
-  names(rast_axe1) = paste0("axe1_",dimension,"_",saison)
-  rast_axe1 = ExtCRS(rast_axe1)
-  writeRaster(rast_axe1, 
-              paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe1_",dimension,"_",saison,".tif"), 
-              overwrite=T)
+  createRasterPCA <- function(number, table){
+    # #TEST
+    # number = 1
+    # table = table_all
+    
+    rast_axe <- rasterFromXYZ(cbind(table[,grep("^x$", names(table))], 
+                                      table[grep("^y$", names(table))], 
+                                      table[grep(paste0("axe",number), names(table))]), 
+                                crs=EPSG_2154)
+    names(rast_axe) = paste0("axe",number,"_",dimension)
+    rast_axe = ExtCRS(rast_axe)
+    writeRaster(rast_axe, 
+                  paste0(chemin_output_ACP,"/",names(rast_axe),".tif"), 
+                  overwrite=T)
+  }
+  if(n_ncp>3){end = 7}else{end=1}
+  if(dimension != "ACP_avec_ponderation | ACP_sans_ponderation"){
+    end=2 # ACP sur une dimension, on ne garde au max que 2 axes
+  }
+  lapply(1:end, function(x) createRasterPCA(number=x, table=table_all))
 
-  if(n_ncp>3){
-    rast_axe2 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe2), crs=EPSG_2154)
-    names(rast_axe2) = paste0("axe2_",dimension,"_",saison)
-    rast_axe2 = ExtCRS(rast_axe2)
-    writeRaster(rast_axe2, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe2_",dimension,"_",saison,".tif"), overwrite=T)
-    
-    rast_axe3 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe3), crs=EPSG_2154)
-    names(rast_axe3) = paste0("axe3_",dimension,"_",saison)
-    rast_axe3 = ExtCRS(rast_axe3)
-    writeRaster(rast_axe3, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe3_",dimension,"_",saison,".tif"), overwrite=T)
-
-    rast_axe4 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe4), crs=EPSG_2154)
-    names(rast_axe4) = paste0("axe4_",dimension,"_",saison)
-    rast_axe4 = ExtCRS(rast_axe4)
-    writeRaster(rast_axe4, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe4_",dimension,"_",saison,".tif"), overwrite=T)
-    
-    rast_axe5 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe5), crs=EPSG_2154)
-    names(rast_axe5) = paste0("axe5_",dimension,"_",saison)
-    rast_axe5 = ExtCRS(rast_axe5)
-    writeRaster(rast_axe5, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe5_",dimension,"_",saison,".tif"), overwrite=T)
-    
-    rast_axe6 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe6), crs=EPSG_2154)
-    names(rast_axe6) = paste0("axe6_",dimension,"_",saison)
-    rast_axe6 = ExtCRS(rast_axe6)
-    writeRaster(rast_axe6, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe6_",dimension,"_",saison,".tif"), overwrite=T)
-    
-    rast_axe7 <- rasterFromXYZ(cbind(table_all$x, table_all$y, table_all$axe7), crs=EPSG_2154)
-    names(rast_axe7) = paste0("axe7_",dimension,"_",saison)
-    rast_axe7 = ExtCRS(rast_axe7)
-    writeRaster(rast_axe7, paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/axe7_",dimension,"_",saison,".tif"), overwrite=T)
-    
-    # sauvegarde brick pour visualiser en multiband sur QGIS
-    writeRaster(stack(rast_axe1,rast_axe2,rast_axe3,rast_axe4,rast_axe5,rast_axe6,rast_axe7), 
-                paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)
-    
-  }else{# sauvegarde brick pour visualiser en multiband sur QGIS
-    writeRaster(stack(rast_axe1), paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/stack_",dimension,"_",saison,".tif"), overwrite=T)}
-  
   # Sauvegarde transfo ACP pour l'appliquer sur d'autres mois
-  save(res.pca, file = paste0(output_path,"/ACP/",dimension,"/",num_saison,saison,"/PCA.rdata"))
+  save(res.pca, file = paste0(chemin_output_ACP,"/PCA.rdata"))
   }
   }
 
 # fonction qui lance PCA sur une dimension
-fct_PCA <- function(dimension,
-                     # arg_ACP,
-                     periode=c("mai",'juin','juillet','aout','septembre'),
+fct_PCA <- function(dimension, # "CA" "B" "PV" "D" "I" "CS" 
                      palette_couleur=mypalette,
-                    ponderation){
+                    ponderation){ # TRUE/FALSE
 
   # # # TEST
-  # dimension = liste.dim[4]
-  # periode = c("mai",'juin','juillet','aout','septembre')
+  # dimension = liste.dim[1]
   # palette_couleur = mypalette
-  # ponderation = "no"
-  # # # TEST
-  # i = periode[1]
-
-  # Fonctionnement par période
-  for(i in periode){
-
-    # # Pour dimension CA, stack avec toutes les variables ou avec 10 vars clim synthétisées en 2 axes
-    # if(dimension == "CA"){
-    #
-    #   cat("\n L'analyse factorielle sur la dimension CA est faite ",arg_ACP,
-    #       " axes ACP des variables climatiques.")
-    #
-    #   liste_stack = list.files(paste0(path_dos_stack,dimension,"/",i),".tif", full.names = T)
-    #
-    #   if(arg_ACP == "sans"){
-    #     stack_ACP = liste_stack[grepl("sansACP",liste_stack)]
-    #   }
-    #   if(arg_ACP == "avec"){
-    #     stack_ACP = liste_stack[!grepl("sansACP",liste_stack)]
-    #   }
-    #   stack_dim <- stack(stack_ACP)
-    # } else {stack_dim <- stack(list.files(paste0(path_dos_stack,dimension,"/",i),".tif", full.names = T))}
-
-    stack_dim <- stack(list.files(paste0(path_dos_stack,dimension,"/",i),".tif",
-                                  full.names = T))
-
-    # Transformation en table
-    dt_stack <- as.data.frame(data.table(as.data.frame(stack_dim)))
-    dt_stack <- cbind(dt_stack,coordinates(stack_dim))
-    # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
-    dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
-    # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
-    dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
-                 dt_to_clean = dt_stack)
-    # # Si au moins un nom de variable de la stack n'est pas trouvé dans la liste des variables
-    # noms_variables = names(dt_stack)[! names(dt_stack) %in% c("x","y")]
-    # if(any(!noms_variables %in% table_variables$Nom)){
-    #   noms_bug = noms_variables[!noms_variables %in% table_variables$Nom]
-    #   cat(paste0("Bug(s) sur le(s) nom(s) : \n- ",paste(noms_bug, collapse ="\n- ")))
-    #   # A la mano
-    #   if(any(grepl("temps_acces", noms_bug))){
-    #     names(dt_stack)[grepl("temps_acces", names(dt_stack))] = "temps_acces"
-    #   }
-    #   if(any(grepl("abondance_feuillage", noms_bug))){
-    #     names(dt_stack)[grepl("abondance_feuillage", names(dt_stack))] = "abondance_feuillage"
-    #   }
-    #   if(any(grepl("NDVI", noms_bug))){
-    #     names(dt_stack)[grepl("NDVI", names(dt_stack))] = "NDVI"
-    #   }
-    #   if(any(grepl("P_ETP", noms_bug))){
-    #     names(dt_stack)[grepl("P_ETP", names(dt_stack))] = "P_ETP"
-    #   }
-    #   if(any(grepl("ht_physio_max", noms_bug))){
-    #     names(dt_stack)[grepl("ht_physio_max", names(dt_stack))] = "ht_physio_max"
-    #   }
-    #   if(any(grepl("diffT__dif_tmean", noms_bug))){
-    #     names(dt_stack)[grepl("diffT", names(dt_stack))] = "diffT"
-    #   }
-    # }
-    
-    # Vérifier la nature des variables (si qualitative, coder en facteur)
-    extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
-    liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
-    dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
-    cat(paste0("\nPréparation table des variables pour dimension ",dimension,
-               " pour le mois de ",i," effectuée.\n"))
-
-    makePCA(dt_stack,i, dimension, palette_couleur,ponderation)
-  }
-
-  # # Chargement d'une stack d'une dimension pour une saison
-  # dim_ete <- paste0(path_dos_stack,dimension,"_ete.tif")
-  # dim_hiv <- paste0(path_dos_stack,dimension,"_hiv.tif")
-  # # Création des stacks
-  # stack_dim_ete <- stack(dim_ete)
-  # #plot(stack_dim_ete)
-  # stack_dim_hiv <- stack(dim_hiv)
-  # # Transformation en table
-  # dt_stack_ete <- as.data.frame(data.table(as.data.frame(stack_dim_ete)))
-  # dt_stack_ete <- cbind(dt_stack_ete,coordinates(stack_dim_ete))
-  # dt_stack_hiv <- as.data.frame(data.table(as.data.frame(stack_dim_hiv)))
-  # dt_stack_hiv <- cbind(dt_stack_hiv,coordinates(stack_dim_hiv))
-  # # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
-  # dt_stack_ete <- dt_stack_ete[complete.cases(dt_stack_ete),]
-  # dt_stack_hiv <- dt_stack_hiv[complete.cases(dt_stack_hiv),]
-  # names(dt_stack_ete) <- sub("_ete","",names(dt_stack_ete))
-  # names(dt_stack_hiv) <- sub("_hiv|_hiver","",names(dt_stack_hiv))
+  # ponderation = FALSE
+  
+  liste_path_stack_dim = list.files(paste0(path_dos_stack,dimension),".tif$",recursive = T,
+             full.names = T)
+  liste_stack_dim = lapply(liste_path_stack_dim, stack)
+  coords = coordinates(liste_stack_dim[[1]])
+  liste_dt_stack_dim = lapply(liste_stack_dim, function(x)as.data.frame(data.table(as.data.frame(x))))
+  liste_dt_stack_dim = lapply(liste_dt_stack_dim, function(x) cbind(coords, x))
+  # S'assurer qu'il y ait les bons noms de colonnes
+  liste_dt_stack_dim = lapply(liste_dt_stack_dim, function(x) cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+                                                                     dt_to_clean = x))
+  dt_stacks =  do.call(rbind, liste_dt_stack_dim)
+  # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée)
+  dt_stacks  <- dt_stacks [complete.cases(dt_stacks),]
   # Vérifier la nature des variables (si qualitative, coder en facteur)
-  # extr_tb = table_variables[table_variables$Nom %in% sub("_ete","",names(dt_stack_ete)), ]
-  # liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
-  # dt_stack_ete[liste_nom_var_quali] <- lapply(dt_stack_ete[liste_nom_var_quali] , factor)
-  # dt_stack_hiv[liste_nom_var_quali] <- lapply(dt_stack_hiv[liste_nom_var_quali] , factor)
-  # str(dt_stack_ete)
-  # str(dt_stack_hiv)
-  # makeFAMD(dt_stack_ete,"ete")
-  # makeFAMD(dt_stack_hiv,"hiv")
+  extr_tb = table_variables[table_variables$Nom %in% names(dt_stacks), ]
+  liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
+  dt_stacks[liste_nom_var_quali] <- lapply(dt_stacks[liste_nom_var_quali] , factor)
+  cat(paste0("\nPréparation table des variables pour dimension ",dimension,
+               " effectuée.\n"))
+  makePCA(table_donnees = dt_stacks,
+          saison = "summer", 
+          dimension = dimension, 
+          palette_couleur = palette_couleur,
+          ponderation = ponderation)
+
 }
 
 
-# fonction qui lance PCA sur toutes les variables en meme temps
-fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
-                         palette_couleur=mypalette, ponderation,
-                        predict = FALSE){
-
-  # # # TEST
-  # periode = 'juillet'
-  # i = periode[1]
-  # palette_couleur = mypalette
-  # ponderation ="no" # "yes" ou "no"
-  # predict= TRUE
-
-  # Fonctionnement par période
-  for(i in periode){
-
-    dirs_mois = list.dirs(paste0(path_dos_stack))[grep(i, list.dirs(paste0(path_dos_stack)))]
-    files_mois = list.files(dirs_mois,".tif", full.names = T)
-
-    # # Pour dimension CA, stack avec toutes les variables ou avec 10 vars clim synthétisées en 2 axes
-    # if(dimension == "CA"){
-    #   liste_stack = list.files(paste0(path_dos_stack,dimension,"/",i),".tif", full.names = T)
-    #   #stack_ssACP = liste_stack[grepl("sansACP",liste_stack)]
-    #   stack_ACP = liste_stack[!grepl("sansACP",liste_stack)]
-    #   stack_dim <- stack(stack_ACP)
-    # }
-    # # Utiliser la stack avec les 10 vars clims en 2 axes ACP
-    # files_mois = files_mois[-grep("sansACP",files_mois)]
-
-    # # Utiliser la stack avec les 10 vars clims
-    # files_mois = files_mois[-grep(paste0("_CA_",i,".tif"),files_mois)]
-
-    stack_mois <- stack(lapply(files_mois ,stack))
-    # Transformation en table
-    dt_stack <- as.data.frame(data.table(as.data.frame(stack_mois)))
-    dt_stack <- cbind(dt_stack,raster::coordinates(stack_mois))
-    # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
-    dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
-    # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
-    dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
-                             dt_to_clean = dt_stack)
-    # Vérifier la nature des variables (si qualitative, coder en facteur)
-    extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
-    liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
-    dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
-    cat(paste0("\nPréparation table des variables pour le mois de ",i," effectuée.\n"))
-    # # ajouter la dimension d'appartenance
-    if(ponderation == "no"){
-      dimension = "ACP_sans_ponderation"
-    } else{dimension = "ACP_avec_ponderation"}
-    # Faire tourner l'ACP
-    makePCA(table_donnees =  dt_stack,
-            saison = i, 
-            dimension = dimension, 
-            palette_couleur = palette_couleur, 
-            ponderation = ponderation,
-            predict = predict)
-  }
-}
+# # fonction qui lance PCA sur toutes les variables en meme temps
+# fct_PCA_all <- function(periode=c("mai",'juin','juillet','aout','septembre'),
+#                          palette_couleur=mypalette, ponderation,
+#                         predict = FALSE){
+# 
+#   # # # TEST
+#   # periode = 'juillet'
+#   # i = periode[1]
+#   # palette_couleur = mypalette
+#   # ponderation ="no" # "yes" ou "no"
+#   # predict= TRUE
+# 
+#   # Fonctionnement par période
+#   for(i in periode){
+# 
+#     dirs_mois = list.dirs(paste0(path_dos_stack))[grep(i, list.dirs(paste0(path_dos_stack)))]
+#     files_mois = list.files(dirs_mois,".tif", full.names = T)
+# 
+#     # # Pour dimension CA, stack avec toutes les variables ou avec 10 vars clim synthétisées en 2 axes
+#     # if(dimension == "CA"){
+#     #   liste_stack = list.files(paste0(path_dos_stack,dimension,"/",i),".tif", full.names = T)
+#     #   #stack_ssACP = liste_stack[grepl("sansACP",liste_stack)]
+#     #   stack_ACP = liste_stack[!grepl("sansACP",liste_stack)]
+#     #   stack_dim <- stack(stack_ACP)
+#     # }
+#     # # Utiliser la stack avec les 10 vars clims en 2 axes ACP
+#     # files_mois = files_mois[-grep("sansACP",files_mois)]
+# 
+#     # # Utiliser la stack avec les 10 vars clims
+#     # files_mois = files_mois[-grep(paste0("_CA_",i,".tif"),files_mois)]
+# 
+#     stack_mois <- stack(lapply(files_mois ,stack))
+#     # Transformation en table
+#     dt_stack <- as.data.frame(data.table(as.data.frame(stack_mois)))
+#     dt_stack <- cbind(dt_stack,raster::coordinates(stack_mois))
+#     # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
+#     dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
+#     # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
+#     dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+#                              dt_to_clean = dt_stack)
+#     # Vérifier la nature des variables (si qualitative, coder en facteur)
+#     extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
+#     liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
+#     dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
+#     cat(paste0("\nPréparation table des variables pour le mois de ",i," effectuée.\n"))
+#     # # ajouter la dimension d'appartenance
+#     if(ponderation == "no"){
+#       dimension = "ACP_sans_ponderation"
+#     } else{dimension = "ACP_avec_ponderation"}
+#     # Faire tourner l'ACP
+#     makePCA(table_donnees =  dt_stack,
+#             saison = i, 
+#             dimension = dimension, 
+#             palette_couleur = palette_couleur, 
+#             ponderation = ponderation,
+#             predict = predict)
+#   }
+# }
 
 # Fonction qui vérifie que le raster ait le bon CRS et extent, et le modifie si besoin
 AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
@@ -839,7 +730,7 @@ col_dim = merge(rbind(table_variables, table_variable_dummies), corresp_col,by.x
 mypalette <- setNames(col_dim$colour_dim, 
                       col_dim$Nom)
 
-##### ACP globale : toutes les dimensions + tous les mois ####
+##### ACP globale (tous les mois) : toutes les dimensions  ####
 dt_stack <- fread(paste0(output_path, "/stack_dim_global/data_env_5months.csv"),drop="V1")
 dt_stack <- as.data.frame(dt_stack[complete.cases(dt_stack),]) #1 056 000 obs -> 249 690 obs
 # Vérifier la nature des variables (si qualitative, coder en facteur)
@@ -877,29 +768,34 @@ lapply(c("mai",'juin','juillet','aout','septembre'),
 # puis la projeter sur les autres mois
 # --> ne fonctionn pas
 
-##### ACP par dimension par mois ####
-lapply(liste.dim, function(x) fct_PCA(x,
-                                 periode=c("mai",'juin','juillet','aout','septembre'),
-                                 palette_couleur=mypalette,
-                                 ponderation = "no")
-       )
+##### ACP globale (tous les mois) par dimension ####
+lapply(liste.dim, function(x) fct_PCA(dimension = x,
+                                      palette_couleur=mypalette,
+                                      ponderation = FALSE)
+)
 
+# ##### ACP par dimension par mois ####
+# lapply(liste.dim, function(x) fct_PCA(x,
+#                                  periode=c("mai",'juin','juillet','aout','septembre'),
+#                                  palette_couleur=mypalette,
+#                                  ponderation = "no")
+#        )
+# # sapply(liste.dim, fct_FAMD,arg_ACP="sans")
+# #sapply(liste.dim, fct_FAMD,arg_ACP="avec")
+# 
+# # # # Relancer FAMD sur une dimension spécifique
+# # fct_PCA(dimension = "CA")
 
-
-# sapply(liste.dim, fct_FAMD,arg_ACP="sans")
-#sapply(liste.dim, fct_FAMD,arg_ACP="avec")
-
-# # # Relancer FAMD sur une dimension spécifique
-# fct_PCA(dimension = "CA")
-
-##### FAMD sur toutes les dimensions simultanément, par mois ####
-fct_PCA_all(ponderation="yes")
-fct_PCA_all(ponderation="no")
+# ##### FAMD sur toutes les dimensions simultanément, par mois ####
+# fct_PCA_all(ponderation="yes")
+# fct_PCA_all(ponderation="no")
 
 ##### ACP sur axes ACP des dimensions, par mois ####
+
+#TODO
+
 lapply(liste.mois, ACP_axesPCA)
-# TODO : tester cette fonction, ça ne devrait pas fonctionner
-# pas pas urgence de corriger ça
+
 
 
 # ##### t-SNE par dimension par saison ####
