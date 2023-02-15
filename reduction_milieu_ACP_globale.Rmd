@@ -1,0 +1,272 @@
+---
+title: "Réduction des variables du milieu"
+author: "Perle Charlot"
+date: "Création : 01/08/2022 - Modification : 15/02/2023"
+output: 
+  html_document:
+    toc: TRUE
+    toc_depth: 3
+    keep_md: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{=html}
+<style type="text/css">
+.main-container {
+  max-width: 100% !important;
+  margin: auto;
+}
+</style>
+```
+```{r setup, include=FALSE}
+#library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+
+# Espace de travail
+wd <- getwd()
+# Liste dimensions
+liste.dim=  c("CA","B","PV","CS","D","I")
+
+input_path <- paste0(wd,"/input/")
+path_table_variables <- paste0(input_path,"/liste_variables.csv")
+
+library(rmarkdown)
+library(knitr)
+library(data.table)
+library(dplyr)
+library(raster)
+library(mapview)
+library(leafsync)
+library(RColorBrewer)
+library(scales)
+```
+
+# Méthode de caractérisation du milieu
+
+Nous pensons que l'environnement, sa structure, ses ressources et ses
+fonctions affectent l'organisation spatiale des usages en montagne.
+
+```{r, echo=FALSE,out.width = "30%",dpi = 200,out.extra='style="float:right; padding:10px"'}
+img1_path <- paste0(input_path,"/schéma_6_dimensions.png")
+include_graphics(img1_path)
+```
+
+La théorie de la niche de Hutchinson, un hypervolume de n dimensions qui
+correspondent aux exigences d'une espèce pour survivre (Hutchinson,
+1957), a été de nombreuses fois adaptée en définissant différemment les
+axes ou les entités étudiées (Blonder 2017). Nous appliquons ce concept
+pour caractériser le milieu en dimensions décrivant les différents types
+de ressources fournies par chaque unité spatiale, qui correspondent aux
+processus qui ont lieu et à leurs résultantes. Notre hypothèse est que
+parmi ces ressources, certaines sont des facteurs explicatifs à la
+présence des usages. En nous inspirant de la biogéographie, qui décrit
+le rôle des facteurs biotiques, abiotiques et de la dispersion dans la
+distribution spatiale des espèces, tout en veillant à considérer
+l'anthropisation de l'environnement, ainsi que son aspect dynamique,
+notre cadre d'analyse décompose les ressources spatiales en six
+dimensions majeures : biomasse, structure de la végétation, conditions
+abiotiques, contexte spatial, dynamique et infrastructures humaines.
+Chaque dimension est décomposée en caractéristiques, elles-mêmes
+approchées par des variables. Au total, c'est plus d'une quarantaine de
+variables qui sont calculées pour décrire cet espace à 6 dimensions.
+
+L'objectif est ensuite de repérer où se situent les différents usages au
+sein de cet espace fonctionnel multidimensionnel.
+
+
+# Analyse factorielle sur toutes les variables (sans pondération par dimension) {.tabset}
+
+```{r, include=FALSE}
+type_donnees <- "ACP_sans_ponderation/summer/"
+```
+
+```{r,fig.show='hold', echo=FALSE, warning=FALSE}
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",type_donnees,"/"), full.names = T)
+table_variables <- fread(path_table_variables, header=T)
+```
+
+## Eboulis variance
+```{r,out.width="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("eboulis_variance",tout)])
+```
+
+## Distribution des pixels sur l'axe 1 et l'axe 2
+```{r,out.width="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("graph_individus_",tout)])
+```
+
+## Cercles de corrélation : axe 1 et 2
+```{r,out.width="30%",out.height="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("cercle_correlation_axe1_2",tout)])
+```
+
+## Cercles de corrélation : axe 2 et 3
+```{r,out.width="30%",out.height="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("cercle_correlation_axes2_3",tout)])
+```
+
+#
+
+| `Axe 1` | `Axe 2` | `Axe 3` |
+|---------|---------|---------|
+|         |         |         |
+
+Pourcentage de contribution des variables pour les 3 premiers axes de l'ACP
+
+```{r,out.width="33%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)],
+                   C1[grep("3",C1)]))
+```
+
+Cartes des 3 premiers axes
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=F)
+
+paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe",paths_rast_ACP)]
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP_axe1[grep("1_",paths_rast_ACP_axe1)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Spectral"))
+r2 <- raster(paths_rast_ACP_axe1[grep("2_",paths_rast_ACP_axe1)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Greens"))
+r3 <- raster(paths_rast_ACP_axe1[grep("3_",paths_rast_ACP_axe1)])
+m3 <- mapview(r3,layer.name="Axe 3",col.regions=brewer.pal(5,"Blues"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, ncol=3)
+```
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+Interprétation des axes
+
+| `Axe 1`       | `Axe 2`      | `Axe 3`       |
+|---------------|--------------|---------------|
+|               |              |               |
+
+-   Axe 1 :  Ce sont grossièrement les mêmes variables 
+qui reviennent par rapport à l’axe 1 de l’ACP 
+temporelle (une par mois). 
+Même étagement altitudinal, 
+valeurs faibles à basse altitude et 
+valeurs fortes à haute altitude. 
+
+-   Axe 2 : Idem, pool de variables CS qui contribuent le plus à l’axe. D’un point de vue géographique, on retrouve le gros patch de forêt à l’ouest et la zone d’éboulis au nord.
+
+-   Axe 3 : Bien que dans les 2 cas (ACP globale et 5 ACP), ce soit des variables climatiques qui contribuent le plus à l’axe 3, ici, il s’agit de variables liées à la nébulosité et la neige alors que pour l’ACP temporelle, ce sont plus des variables de pente et de rayonnement qui contribuent le plus.
+Visuellement, les cartes de cet axe sont assez différents : ici, on retrouve le patch forestier à l’ouest et la zone d’altitude à l’est.
+
+# Analyse factorielle sur toutes les variables (avec pondération par dimension) {.tabset}
+```{r, include=FALSE}
+type_donnees <- "ACP_avec_ponderation/summer/"
+tout = list.files(recursive = T, paste0(wd,"/output/ACP/",type_donnees,"/"), full.names = T)
+```
+
+## Eboulis variance
+```{r,out.width="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("eboulis_variance",tout)])
+```
+
+## Distribution des pixels sur l'axe 1 et l'axe 2
+```{r,out.width="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("graph_individus_",tout)])
+```
+
+## Cercles de corrélation : axe 1 et 2
+```{r,out.width="30%",out.height="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("cercle_correlation_axe1_2",tout)])
+```
+
+## Cercles de corrélation : axe 2 et 3
+```{r,out.width="30%",out.height="30%",fig.align='center', echo=FALSE, warning=FALSE}
+include_graphics(tout[grep("cercle_correlation_axes2_3",tout)])
+```
+
+#
+
+| `Axe 1` | `Axe 2` | `Axe 3` |
+|---------|---------|---------|
+|         |         |         |
+
+Pourcentage de contribution des variables pour les 3 premiers axes de l'ACP
+
+```{r,out.width="33%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)],
+                   C1[grep("3",C1)]))
+```
+
+Cartes des 3 premiers axes
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/",type_donnees,"/"),'.tif$',full.names = T,recursive=F)
+
+paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe",paths_rast_ACP)]
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP_axe1[grep("1_",paths_rast_ACP_axe1)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Spectral"))
+r2 <- raster(paths_rast_ACP_axe1[grep("2_",paths_rast_ACP_axe1)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Greens"))
+r3 <- raster(paths_rast_ACP_axe1[grep("3_",paths_rast_ACP_axe1)])
+m3 <- mapview(r3,layer.name="Axe 3",col.regions=brewer.pal(5,"Blues"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, ncol=3)
+```
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+Interprétation des axes
+
+| `Axe 1`       | `Axe 2`      | `Axe 3`       |
+|---------------|--------------|---------------|
+|               |              |               |
+
+-   Axe 1 :  Dans l’ACP temporelle, pour le 1er axe, les variables hauteur de physionomie et diffT alternaient la première contribution le long des mois. Ici, c’est la variable hauteur de physionomie qui exprime le plus cet axe (corrélation positive).
+On retrouve quand-même globalement le même pattern que sur les ACP au cours du temps.
+Valeurs faibles <-> hautes altitudes (valeurs les plus faibles = lacs et zones anthropisées; valeurs fortes <-> basses altitudes -> haute hauteur de physionomie, productif en biomasse = forêts
+
+
+-   Axe 2 : Cet axe connaissait lui aussi une variation temporelle, où les variables P_ETP et diffT prenaient tour à tour la plus grande part de contribution. A noter que pour les mois de juillet et aout, la variable P_ETP ne faisait même plus partie des 10 premières contributrices.
+ Ici, c’est la différence climatique qui l’emporte (diffT), suivie par la variable de bilan hydrique. Les variables de contexte spatial sont aussi présentes (corrélées (+) ).
+Valeurs fortes <-> zone qui a subi un réchauffement plus fort sur les 30 dernières années avec bilan hydrique faible, de grande taille (arbres) [en fait cette variable a un cos² faible], hors des couloirs d’avalanches. Il est intéressant de noter qu’à la fois le patch forestier de l’ouest et la zone d’éboulis d’altitude au nord présentes tous les deux des valeurs élevées dans cet axe, et aussi la forêt dans le plateau de l’Arselle : peut-être dû à leur valeur similaire dans la variable similarité ? -> Après vérification, ce sont bien les zones qui ont des de nombreux voisins similaires transparaissent ici.
+Valeurs faibles <-> couloirs d’avalanches, 
+
+
+-   Axe 3 : Assez similaire avec ACPs temporelles (variables de dynamique qui sortent en premier). Néanmoins, ici, les variables de physionomie de végétation n’apparaissent pas tandis que les variables CS sont très présentes.
+Visuellement, les cartes sont très différentes.
+Valeurs fortes <-> ~ nombreux voisins similaires
+Valeurs faibles <-> couloirs d’avalanches
+
+# Tableau récapitulatif des variables utilisées
+
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+kable(table_variables)
+
+```
