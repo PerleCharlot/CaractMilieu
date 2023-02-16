@@ -609,103 +609,173 @@ ACP_axesPCA <- function(palette_couleur=mypalette){
 }
 
 # fonction qui transforme les vars envs selon une ACP choisie
-applyPCAtransformation <- function(mois,
-                                   ponderation,
-                                   type_analyse){
+applyPCAtransformation <- function(mois, # "mai" "juin" etc
+                                   ponderation, # TRUE FALSE
+                                   mode # dimensions ou ACP_ACP ou globale
+                                   ){
   
   # # TEST
-  # mois = "juin"
-  # ponderation = TRUE # FALSE
-  # type_analyse = "summer" # "monthly"
+  # mois = "mai"
+  # ponderation = FALSE # TRUE FALSE
+  # mode = "ACP_ACP" # "dimensions" "ACP_ACP" "globale"
   
-  # ajouter la dimension d'appartenance
-  if(ponderation){dimension = "ACP_avec_ponderation"} else{dimension = "ACP_sans_ponderation"}
+  pond <- ifelse(ponderation,"avec","sans")
   
-  if(!dir.exists(paste0(output_path,"/ACP/",dimension,"/",type_analyse,"/pred_month/",mois,"/"))){
-    dir.create(paste0(output_path,"/ACP/",dimension,"/",type_analyse,"/pred_month/",mois,"/"),recursive = T)}
-  
-  dirs_mois = list.dirs(paste0(path_dos_stack))[grep(mois, list.dirs(paste0(path_dos_stack)))]
-  files_mois = list.files(dirs_mois,".tif", full.names = T)
-  stack_mois <- stack(lapply(files_mois ,stack))
-  # Transformation en table
-  dt_stack <- as.data.frame(data.table(as.data.frame(stack_mois)))
-  dt_stack <- cbind(raster::coordinates(stack_mois),dt_stack)
-  # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) : 211 200 pixels --> 50 320
-  dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
-  # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
-  dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
-                           dt_to_clean = dt_stack)
-  # Vérifier la nature des variables (si qualitative, coder en facteur)
-  extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
-  liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
-  dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
-  cat(paste0("\nPréparation table des variables pour le mois de ",mois," effectuée.\n"))
-  
-  
-  # Dummiser variables
-  extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
-  names_var_quali =  extr_tb$Nom[which(extr_tb$Nature == "qualitative")] 
-  # Check for dummies variables
-  t = try(dummy_cols(dt_stack, remove_selected_columns=T), silent = TRUE)
-  if(inherits(t, "try-error")) {
-    dt_stack <- dt_stack
-    #df_w = table_variables[table_variables$Nom %in% names(dt_stack)]
-  } else {   
-    # Transformer factoriel (ordi et quali) en boolean (0/1)
-    dt_stack <- dummy_cols(dt_stack, 
-                           select_columns=names_var_quali,
-                           remove_selected_columns=T)
-    
-    # Matrice de pondération des variables dans ACP par dimension
-    df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(dt_stack)]
-    df_quanti = table_variables[table_variables$Nom %in% names(dt_stack)]
-    df_w = rbind(df_quanti, df_dum)
+  if(mode == "dimensions"){
+    # Dossier où seront stockées les prédictions
+    chemin_stock <- paste0(output_path,"/ACP/",liste.dim,"/summer/",pond,"_ponderation/")
+    # Dossiers où récuperer les rasters sur lesquels il faut appliquer la transformation (ACP)
+    dirs_mois = list.dirs(paste0(path_dos_stack))[grep(mois, list.dirs(paste0(path_dos_stack)))]
+    # # Chemin ACP à utiliser
+    # liste_PCA = paste0(chemin_stock,"/PCA.rdata")
+    cat("Applications d'ACPs sur les dimensions B, CA, PV, I, CS et D, une par une. \n")
   }
-  # Retirer les coordonnées x et y
-  idx_vars_quanti_sup = c(grep("^x$", names(dt_stack)),grep("^y$", names(dt_stack)))
-  dt_stack2 <- dt_stack %>% select(-idx_vars_quanti_sup)
+  if(mode == "globale"){
+    nom_modalite = paste0("ACP_",pond,"_ponderation")
+    # Dossier où seront stockées les prédictions
+    chemin_stock <- paste0(output_path,"/ACP/",nom_modalite,"/summer/")
+    # Dossiers où récuperer les rasters sur lesquels il faut appliquer la transformation (ACP)
+    dirs_mois = list.dirs(paste0(path_dos_stack))[grep(mois, list.dirs(paste0(path_dos_stack)))]
+    # # Chemin ACP à utiliser
+    # liste_PCA = paste0(chemin_stock, "/PCA.rdata")
+    cat("Application d'ACP sur les dimensions B, CA, PV, I, CS et D. \n")
+  }
+  # TODO : à tester
+  if(mode == "ACP_ACP"){
+    nom_modalite = mode
+    # Dossier où seront stockées les prédictions
+    chemin_stock <- paste0(output_path,"/ACP/",nom_modalite,"/summer/",pond,"_ponderation/")
+    # Dossiers où récuperer les rasters sur lesquels il faut appliquer la transformation (ACP)
+    dirs_mois<- paste0(output_path,"/ACP/",liste.dim,"/summer/",pond,"_ponderation/pred_month/",mois)
+    # # Chemin ACP à utiliser
+    # liste_PCA = paste0(chemin_stock,"/PCA.rdata")
+    cat("Application d'ACP sur les ACPs des dimensions B, CA, PV, I, CS et D. \n")
+  }
+
+  # Chemin ACP à utiliser
+  liste_PCA = paste0(chemin_stock,"/PCA.rdata")
   
-  # Appliquer un poids ?? ou déjà pris en compte dans transfo d'ACP ?
-  
-  # Load PCA
-  load(paste0(output_path,"/ACP/",dimension,"/",type_analyse,"/PCA.rdata"))
-  # appliquer transfo ACP
-  dt_predPCA = predict.PCA(object = res.pca, newdata =  dt_stack2)
-  # valeurs des axes, par pixels
-  PCA_tbl <- as.data.frame(dt_predPCA$coord)
-  names(PCA_tbl) = paste0("axe",seq(1:length(colnames(PCA_tbl))))
-  table_all <- cbind(PCA_tbl,dt_stack)
-  write.csv(table_all, paste0(output_path,"/ACP/",dimension,"/",type_analyse,"/pred_month/",mois,"/PCA_values_",mois,".csv"))
-  
-  ref = raster(chemin_mnt)
-  ExtCRS <- function(raster_to_check, raster_ref = ref){
-    # #TEST
-    # raster_to_check = rast_axe1
-    # raster_ref=ref
-    
-    ext.to.check <- extent(raster_to_check)
-    sameCRS <- compareCRS(raster_to_check,EPSG_2154)
-    sameExtent <- (ext.to.check == extent(raster_ref))
-    if(any(!sameCRS,!sameExtent)) {
-      raster_to_check <- projectRaster(raster_to_check, raster_ref)
+  if(!any(dir.exists(paste0(chemin_stock,"/pred_month/",mois,"/")))){
+    lapply(paste0(chemin_stock,"/pred_month/",mois,"/"), function(x) dir.create(x,recursive=T))
     }
-    return(raster_to_check)
+
+  StackandPred <- function(dossier_input,nom_dim=FALSE){
+    # # TEST
+    # dossier_input = dirs_mois
+    # nom_dim = FALSE
+    
+    files_mois = list.files(dossier_input,".tif$", full.names = T)
+    stack_mois <- stack(lapply(files_mois ,stack))
+    # Transformation en table
+    dt_stack <- as.data.frame(data.table(as.data.frame(stack_mois)))
+    dt_stack <- cbind(raster::coordinates(stack_mois),dt_stack)
+    # Retirer les NA (quand calculé sur N2000 et pas emrpise carrée) 
+    dt_stack <- dt_stack[complete.cases(dt_stack),] 
+    # Ré-écrire correctement le nom des variables (si jamais du superflu traine)
+    dt_stack <- cleanVarName(liste_nom_var_ref = table_variables$Nom, 
+                             dt_to_clean = dt_stack)
+    # Vérifier la nature des variables (si qualitative, coder en facteur)
+    extr_tb = table_variables[table_variables$Nom %in% names(dt_stack), ]
+    liste_nom_var_quali = extr_tb$Nom[which(extr_tb$Nature == "qualitative")]
+    dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
+    cat(paste0("\nPréparation table des variables pour le mois de ",mois," effectuée.\n"))
+    
+    # Check for dummies variables
+    t = try(dummy_cols(dt_stack, remove_selected_columns=T), silent = TRUE)
+    if(inherits(t, "try-error")) {
+      dt_stack <- dt_stack
+      #df_w = table_variables[table_variables$Nom %in% names(dt_stack)]
+    } else {   
+      # Transformer factoriel (ordi et quali) en boolean (0/1)
+      dt_stack <- dummy_cols(dt_stack, 
+                             select_columns=liste_nom_var_quali,
+                             remove_selected_columns=T)
+      
+      # Matrice de pondération des variables dans ACP par dimension
+      df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(dt_stack)]
+      df_quanti = table_variables[table_variables$Nom %in% names(dt_stack)]
+      df_w = rbind(df_quanti, df_dum)
+    }
+    # Retirer les coordonnées x et y
+    idx_vars_quanti_sup = c(grep("^x$", names(dt_stack)),grep("^y$", names(dt_stack)))
+    dt_stack2 <- dt_stack %>% select(-idx_vars_quanti_sup)
+    
+    #nettoyer noms variables
+    if(grepl(mois,names(dt_stack2[1]))){
+      m = nchar(mois) + 1
+      names(dt_stack2) = substr(names(dt_stack2), 1, nchar(names(dt_stack2))-m)
+    }
+    
+    # Appliquer un poids ?? ou déjà pris en compte dans transfo d'ACP ?
+    
+    if(nom_dim){
+      m = nchar(mois) + 2
+      DIM = substr(dossier_input, nchar(dossier_input)-m, nchar(dossier_input)-m+1)
+      DIM = gsub("/","",DIM)
+      
+      chemin_PCA = liste_PCA[grep(paste0("/",DIM,"/"), liste_PCA)]
+      chemin_stock_ici = chemin_stock[grep(paste0("/",DIM,"/"), chemin_stock)]
+      modalite = DIM
+    }else{
+      chemin_PCA = liste_PCA
+      chemin_stock_ici = chemin_stock
+      modalite = nom_modalite}
+    
+    # Load PCA
+    load(chemin_PCA)
+    # appliquer transfo ACP
+    dt_predPCA = predict.PCA(object = res.pca, newdata =  dt_stack2)
+    # # vérifier les noms des variables
+    # names(res.pca$call$X)
+    # names(dt_stack2)
+    
+    # valeurs des axes, par pixels
+    PCA_tbl <- as.data.frame(dt_predPCA$coord)
+    names(PCA_tbl) = paste0("axe",seq(1:length(colnames(PCA_tbl))))
+    table_all <- cbind(PCA_tbl,dt_stack)
+    write.csv(table_all, paste0(chemin_stock_ici,"/pred_month/",mois,"/PCA_values_",mois,".csv"))
+    
+    ref = raster(chemin_mnt)
+    ExtCRS <- function(raster_to_check, raster_ref = ref){
+      # #TEST
+      # raster_to_check = rast_axe1
+      # raster_ref=ref
+      
+      ext.to.check <- extent(raster_to_check)
+      sameCRS <- compareCRS(raster_to_check,EPSG_2154)
+      sameExtent <- (ext.to.check == extent(raster_ref))
+      if(any(!sameCRS,!sameExtent)) {
+        raster_to_check <- projectRaster(raster_to_check, raster_ref)
+      }
+      return(raster_to_check)
+    }
+    createRasterPCA <- function(number, table, mois){
+      # #TEST
+      # number = 1
+      # table = table_all
+      cat(modalite,"\n")
+      rast_axe <- rasterFromXYZ(cbind(table[,grep("^x$", names(table))], 
+                                      table[grep("^y$", names(table))], 
+                                      table[grep(paste0("axe",number,"$"), names(table))]), 
+                                crs=EPSG_2154)
+      
+      names(rast_axe) = paste0("axe",number,"_",modalite,"_",mois)
+      rast_axe = ExtCRS(rast_axe)
+      writeRaster(rast_axe, 
+                  paste0(chemin_stock_ici,"/pred_month/",mois,"/",names(rast_axe),".tif"),
+                  overwrite=T)
+    }
+    
+    n_rast = length(list.files(chemin_stock_ici,".tif$"))
+    if(n_rast>7){n_rast=7}
+    lapply(1:n_rast, function(x) createRasterPCA(number=x, table=table_all, mois = mois))
   }
-  createRasterPCA <- function(number, table, mois){
-    # #TEST
-    # number = 1
-    # table = table_all
-    rast_axe <- rasterFromXYZ(cbind(table[,grep("^x$", names(table))], 
-                                    table[grep("^y$", names(table))], 
-                                    table[grep(paste0("axe",number), names(table))]), 
-                              crs=EPSG_2154)
-    names(rast_axe) = paste0("axe",number,"_",dimension,"_",mois)
-    rast_axe = ExtCRS(rast_axe)
-    writeRaster(rast_axe, 
-                paste0(output_path,"/ACP/",dimension,"/",type_analyse,"/pred_month/",mois,"/",names(rast_axe),".tif"), 
-                overwrite=T)
-  }
-  lapply(1:7, function(x) createRasterPCA(number=x, table=table_all, mois = mois))
+  
+  # a l'air de finctionner
+  if(mode == "dimensions"){
+    lapply(as.list(dirs_mois),function(x) StackandPred(dossier_input = x,
+                                                       nom_dim = TRUE))
+  } else{StackandPred(dirs_mois)} # if mode == "globale" ou "ACP_ACP"
   
 }
 
@@ -774,15 +844,15 @@ makePCA(table_donnees = dt_stack,
 
 # sortir df pour chaque mois des valeurs des variables dans les axes de l'ACP
 # afin de pouvoir faire tourner modèle distribution linéire dessous
-lapply(c("mai",'juin','juillet','aout','septembre'),
-       function(x) applyPCAtransformation(mois = x,
-                                          ponderation = TRUE,
-                                          type_analyse = "summer"))
 
-lapply(c("mai",'juin','juillet','aout','septembre'),
-       function(x) applyPCAtransformation(mois = x,
-                                          ponderation = FALSE,
-                                          type_analyse = "summer"))
+# fonctionne
+lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
+                                                      ponderation= FALSE,
+                                                      mode = "globale"))
+# fonctionne
+lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
+                                                      ponderation= TRUE,
+                                                      mode = "globale"))
 
 # une ACP sur 1 mois
 # puis la projeter sur les autres mois
@@ -796,8 +866,15 @@ lapply(liste.dim, function(x) fct_PCA(dimension = x,
 
 ##### ACP d'ACPs des dimensions ####
 
-#TODO
 ACP_axesPCA(palette_couleur=mypalette)
+# fonctionne
+lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
+                                                      ponderation= FALSE,
+                                                      mode = "dimensions"))
+# fonctionne
+lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
+                                                      ponderation= FALSE,
+                                                      mode = "ACP_ACP"))
 
 # ##### ACP par dimension par mois ####
 # lapply(liste.dim, function(x) fct_PCA(x,
