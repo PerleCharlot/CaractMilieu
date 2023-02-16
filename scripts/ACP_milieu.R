@@ -2,7 +2,7 @@
 # Nom : ACP du milieu
 # Auteure : Perle Charlot
 # Date de création : 04-06-2022
-# Dates de modification : 15-02-2023
+# Dates de modification : 16-02-2023
 
 ### Librairies -------------------------------------
 
@@ -45,12 +45,18 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # palette_couleur = palette_couleur
   # ponderation = ponderation
   
+  # table_donnees = dt_stack
+  # saison = "summer"
+  # dimension = "ACP_ACP"
+  # palette_couleur = palette_couleur
+  # ponderation = FALSE
+  
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
   num_saison = corresp$numero_saison[which(corresp$periode == saison)]
   corresp_col = data.frame(dim_name = c("CA","B","PV","CS","D","I",
                                         "ACP_sans_ponderation","ACP_avec_ponderation",
-                                        "ACP_FAMD"),
+                                        "ACP_ACP"),
                        colour_dim = c("dodgerblue","darkgoldenrod1","darkgreen",
                                       "brown","blueviolet","darkgray",
                                       "antiquewhite","antiquewhite",
@@ -75,14 +81,10 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   
   # Pour dimension = ACP_ACP (qui maintenant est une ACP d'ACP ...)
   if(dimension == "ACP_ACP"){
-    corresp_axes = data.frame(axe_AFDM =c(paste0("axe1_B_",saison),paste0("axe2_B_",saison) ,paste0("axe3_B_",saison),
-                                          paste0("axe1_CA_",saison), paste0("axe2_CA_",saison), paste0("axe3_CA_",saison),
-                                          paste0("axe1_CS_",saison), paste0("axe2_CS_",saison) ,paste0("axe3_CS_",saison),
-                                          paste0("axe1_D_",saison) ,  paste0("axe2_D_",saison),
-                                          paste0("axe1_I_",saison),  paste0("axe2_I_",saison), paste0("axe3_I_",saison),
-                                          paste0("axe1_PV_",saison), paste0("axe2_PV_",saison), paste0("axe3_PV_",saison)),
-                              dim_name=c(rep("B",3),rep("CA",3),rep("CS",3),rep("D",2),rep("I",3),rep("PV",3))
-    )
+    n=3
+    corresp_axes = data.frame(axe_AFDM =unlist(lapply(liste.dim,function(x)paste0("axe",1:n,"_",x))),
+                              dim_name=unlist(lapply(liste.dim,function(x)rep(x,n)))
+                                         )
     a = merge(corresp_axes, corresp_col, by="dim_name")
     palette_couleur <- setNames(a$colour_dim,
                           a$axe_AFDM)
@@ -154,6 +156,9 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   W = df_w$weight[match(names(tbl_data2), df_w$Nom)]
   #sum(na.omit(W))
   W[is.na(W)] <- 0
+  
+  # Dans ACP_ACP, les poids sont nulles -> les passer à 1
+  W[] <- 1
   
   # Plutot que les retirer, les considérer en vars supplémentaires
   
@@ -416,7 +421,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
     
     rast_axe <- rasterFromXYZ(cbind(table[,grep("^x$", names(table))], 
                                       table[grep("^y$", names(table))], 
-                                      table[grep(paste0("axe",number), names(table))]), 
+                                      table[grep(paste0("axe",number,"$"), names(table))]), 
                                 crs=EPSG_2154)
     names(rast_axe) = paste0("axe",number,"_",dimension)
     rast_axe = ExtCRS(rast_axe)
@@ -425,9 +430,11 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
                   overwrite=T)
   }
   if(n_ncp>3){end = 7}else{end=1}
-  if(dimension != "ACP_avec_ponderation | ACP_sans_ponderation"){
+  
+  if(any(grepl(dimension,liste.dim))){
     end=2 # ACP sur une dimension, on ne garde au max que 2 axes
   }
+  cat(paste0("normalement devrait y avoir ",end," composantes en raster."))
   lapply(1:end, function(x) createRasterPCA(number=x, table=table_all))
 
   # Sauvegarde transfo ACP pour l'appliquer sur d'autres mois
@@ -556,35 +563,48 @@ AjustExtCRS <- function(path.raster.to.check, path.raster.ref=chemin_mnt){
 }
 
 # Fonction pour faire une ACP sur les axes des FAMD de chaque dimensions
-ACP_axesPCA <- function(mois, palette_couleur=mypalette){
+ACP_axesPCA <- function(palette_couleur=mypalette){
 
   # # # TEST
   # mois = liste.mois[1]
   # palette_couleur = mypalette
 
-  cat("\n Mois de ",mois," en cours.")
+  #cat("\n Mois de ",mois," en cours.")
 
-  liste_axes = list.files(paste0(output_path,"/ACP/"),".tif", recursive = T, full.names = T)
-  # Virer les axes issues de la FAMD globale
-  liste_axes = liste_axes[!grepl("toutes|ACP_AFDM|TEST",liste_axes)]
-  # Garder le mois en cours
-  liste_axes = liste_axes[grepl(mois,liste_axes)]
+  liste_axes = list.files(paste0(output_path,"/ACP/",liste.dim,"/summer/avec_ponderation/"),
+                          ".tif$|.TIF$", recursive = T, full.names = T)
+  
+  # # Virer les axes issues de la FAMD globale
+  # liste_axes = liste_axes[!grepl("toutes|ACP_ACP|TEST",liste_axes)]
+  # # Garder le mois en cours
+  # liste_axes = liste_axes[grepl(mois,liste_axes)]
 
   # S'assurer de la conformité des variables
   lapply(liste_axes, AjustExtCRS)
   # Stack les axes
-  stack_mois <- stack(liste_axes)
+  stack_axesACPs <- stack(liste_axes)
+  plot(stack_axesACPs, colNA="black")
 
+  # # Après inspection, inutile conserver deux axes de D 
+  # testD = stack_axesACPs$axe1_D -  stack_axesACPs$axe2_D
+  # plot(testD, colNA= "black")
+
+  stack_axesACPs <- dropLayer(stack_axesACPs, grep("axe2_D",names(stack_axesACPs)))
+  
   # Transformation en table
-  dt_stack <- as.data.frame(data.table(as.data.frame(stack_mois)))
-  dt_stack <- cbind(dt_stack,raster::coordinates(stack_mois))
+  dt_stack <- as.data.frame(data.table(as.data.frame(stack_axesACPs)))
+  dt_stack <- cbind(dt_stack,raster::coordinates(stack_axesACPs[[1]]))
   # Retirer les NA (quand calculé sur N2000 et pas emprise carrée) : 211 200 pixels --> 50 320
   dt_stack <- dt_stack[complete.cases(dt_stack),]     # 211 200 pixels --> 98 967
 
   # # ajouter la dimension d'appartenance
   # merge(dt_stack, table_variables)
 
-  makePCA(dt_stack, mois, dimension = "ACP_AFDM", palette_couleur)
+  makePCA(table_donnees = dt_stack,
+          saison = "summer",
+          dimension = "ACP_ACP",
+          palette_couleur = palette_couleur,
+          ponderation = FALSE)
 
 }
 
@@ -774,6 +794,11 @@ lapply(liste.dim, function(x) fct_PCA(dimension = x,
                                       ponderation = FALSE)
 )
 
+##### ACP d'ACPs des dimensions ####
+
+#TODO
+ACP_axesPCA(palette_couleur=mypalette)
+
 # ##### ACP par dimension par mois ####
 # lapply(liste.dim, function(x) fct_PCA(x,
 #                                  periode=c("mai",'juin','juillet','aout','septembre'),
@@ -789,13 +814,6 @@ lapply(liste.dim, function(x) fct_PCA(dimension = x,
 # ##### FAMD sur toutes les dimensions simultanément, par mois ####
 # fct_PCA_all(ponderation="yes")
 # fct_PCA_all(ponderation="no")
-
-##### ACP sur axes ACP des dimensions, par mois ####
-
-#TODO
-
-lapply(liste.mois, ACP_axesPCA)
-
 
 
 # ##### t-SNE par dimension par saison ####
