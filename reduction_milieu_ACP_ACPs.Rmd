@@ -21,14 +21,6 @@ output:
 #library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 
-# Espace de travail
-wd <- getwd()
-# Liste dimensions
-liste.dim=  c("CA","B","PV","CS","D","I")
-
-input_path <- paste0(wd,"/input/")
-path_table_variables <- paste0(input_path,"/liste_variables.csv")
-
 library(rmarkdown)
 library(knitr)
 library(data.table)
@@ -38,13 +30,22 @@ library(mapview)
 library(leafsync)
 library(RColorBrewer)
 library(scales)
+
+# Espace de travail
+wd <- getwd()
+# Liste dimensions
+liste.dim=  c("CA","B","PV","CS","D","I")
+
+output_path <- paste0(wd,"/output/ACP/")
+path_table_variables <- paste0(wd,"/input/liste_variables.csv")
+table_variables <- fread(path_table_variables, header=T)
 ```
 
 # Méthode de caractérisation du milieu
 
 Nous pensons que l'environnement, sa structure, ses ressources et ses fonctions affectent l'organisation spatiale des usages en montagne.
 ```{r, echo=FALSE,out.width = "30%",dpi = 200,out.extra='style="float:right; padding:10px"'}
-img1_path <- paste0(input_path,"/schéma_6_dimensions.png")
+img1_path <- paste0(wd,"/input/schéma_6_dimensions.png")
 include_graphics(img1_path)
 ```
 
@@ -55,936 +56,489 @@ Chaque dimension est décomposée en caractéristiques, elles-mêmes approchées
 
 L'objectif est ensuite de repérer où se situent les différents usages au sein de cet espace fonctionnel  multidimensionnel.
 
-
-<!-- # Analyse factorielle par dimension {.tabset} -->
-
 <!-- On utilise des **AFDM** (**Analyse Factorielle des Données Mixtes**, ou FAMD Factor Analysis for Mixed Data en anglais) pour traiter notre jeu de données car il contient des variables quantitatives et qualitatives. L'AFDM procède de la même manière qu'une ACP (Analyse en Composantes Principales) sur les variables quantitatives, et performe une ACM (Analyses des Correspondances Multiples) sur les variables qualitatives. -->
 
-<!-- ## **Conditions Abiotiques** -->
-
-<!-- Cette dimension décrit les conditions abiotiques, donc les caractéristiques associées au pixel qui ne sont pas dépendantes des êtres vivants. Elle est déclinée en 3 catégories : le climat, la topographie et l'hydrologie. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[1] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- # exclure ACP -->
-<!-- # tout <- tout[-grep("avec_ACP_clim",tout)] -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-
 <!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
 <!-- |----|----|----|----|----| -->
 <!-- |` `|` `|` `|` `|` `| -->
-
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quanti_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quanti_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- ### Interprétation des axes :   -->
-
-<!-- * Axe 1 : décrit par les variables climatiques.  -->
-<!-- Il représente des pixels aux températures basses, avec peu de nébulosité, ventés, enneigés, secs et gelés . On peut ici y lire un effet de l'altitude : ces caractéristiques sont liées à une augmentation de l'altitude. -->
-<!-- Cette hypothèse est vérifiée par la visualisation cartographique de l'axe 1 : ce sont bien des pixels d'altitude qui ont les valeurs les plus élevées (valeur dans l'axe d'ACP). -->
-<!-- * Axe 1 : corrélé + = landform 10, 7 et 3; corrélé - = landform 8, 4 et 1. A REGARDER   -->
-
-<!-- ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/CA/"),'.tif$',full.names = T,recursive=TRUE) -->
-
-<!-- paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe1_",paths_rast_ACP)] -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- r1 <- raster(paths_rast_ACP_axe1[grep("mai",paths_rast_ACP_axe1)]) -->
-<!-- m1 <- mapview(r1,layer.name="Axe 1 - Mai",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r2 <- raster(paths_rast_ACP_axe1[grep("juin",paths_rast_ACP_axe1)]) -->
-<!-- m2 <- mapview(r2,layer.name="Axe 1 - Juin",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r3 <- raster(paths_rast_ACP_axe1[grep("juillet",paths_rast_ACP_axe1)]) -->
-<!-- m3 <- mapview(r3,layer.name="Axe 1 - Juillet",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r4 <- raster(paths_rast_ACP_axe1[grep("aout",paths_rast_ACP_axe1)]) -->
-<!-- m4 <- mapview(r4,layer.name="Axe 1 - Aout",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r5 <- raster(paths_rast_ACP_axe1[grep("septembre",paths_rast_ACP_axe1)]) -->
-<!-- m5 <- mapview(r5,layer.name="Axe 1 - Septembre",col.regions=brewer.pal(5,"Blues")) -->
-
-<!-- ## view different aspects of same data set -->
-<!-- leafsync::sync(m1, m2, m3, m4, m5, ncol=5) -->
-<!-- ``` -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-
-<!-- * Axe 2 : décrit par les variables topographiques.   -->
-<!-- Il représente des pixels pentus, avec une diversité de reliefs élevée, ESATING POSITIF = ?? face est ou ouest ? -->
-<!-- avec un potentiel hydrique faible et peu de rayonnement. Ici, le contraste se fait donc plus sur l'inclinaison du terrain, ce qui est confirmé visualisation cartographique (valeurs faibles pour les zones plates et élevées pour les crêtes).   -->
-<!-- * Axe 2 : corrélé + = landform 8; corrélé - = présence d'eau,landform 5.   -->
-
-<!-- ```{r, echo=FALSE,out.width="20%",fig.show='hold',message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/CA/"),'.tif$',full.names = T,recursive=TRUE) -->
-
-<!-- paths_rast_ACP_axe = paths_rast_ACP[grep("axe2_",paths_rast_ACP)] -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- r1 <- raster(paths_rast_ACP_axe[grep("mai",paths_rast_ACP_axe)]) -->
-<!-- m1 <- mapview(r1,layer.name="Axe 2 - Mai",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r2 <- raster(paths_rast_ACP_axe[grep("juin",paths_rast_ACP_axe)]) -->
-<!-- m2 <- mapview(r2,layer.name="Axe 2 - Juin",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r3 <- raster(paths_rast_ACP_axe[grep("juillet",paths_rast_ACP_axe)]) -->
-<!-- m3 <- mapview(r3,layer.name="Axe 2 - Juillet",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r4 <- raster(paths_rast_ACP_axe[grep("aout",paths_rast_ACP_axe)]) -->
-<!-- m4 <- mapview(r4,layer.name="Axe 2 - Aout",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r5 <- raster(paths_rast_ACP_axe[grep("septembre",paths_rast_ACP_axe)]) -->
-<!-- m5 <- mapview(r5,layer.name="Axe 2 - Septembre",col.regions=brewer.pal(5,"Blues")) -->
-
-<!-- ## view different aspects of same data set -->
-<!-- leafsync::sync(m1, m2, m3, m4, m5, ncol=5) -->
-<!-- ``` -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-
-<!-- * Axe 3 : rayonnement + et pente nord/sud - (vérifier à quoi ça correspond, mais intuition que c'est sud). On a donc un effet thermique; l'axe représente des pixels un peu plus chauds. -->
-<!-- * Axe 3 : corrélé + = landform 5 + présence eau; corrélé - = landform 10 -->
-
-<!-- Variation au cours du temps :   -->
-<!-- Durant les mois de juin, juillet et août, quelques variables climatiques prennent du poids dans l'axe 2 : neige, gel et pluie, qui sont corrélés négativement. Cela correspond à des pixels d'altitude élevée. A COGITER -->
-<!-- Axe 3 : corrélation northing et rayonnement s'inversent en juillet/août (devient + et -, respectivement). ?? A COGITER -->
-<!-- VARS QUALI : Inversion sur l'axe 3 en juillet + août. -->
-
-<!-- ### Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ```  -->
-
-<!-- ## **Conditions Abiotiques avec ACP sur variables climatiques** -->
-
-<!-- Cette dimension décrit les conditions abiotiques, donc les caractéristiques associées au pixel qui ne sont pas dépendantes des êtres vivants. Elle est déclinée en 3 catégories : le climat, la topographie et l'hydrologie. -->
-
-<!-- Les variables climatiques, très corrélées entre elles, ont été réduites en 2 variables via une ACP. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[1] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/avec_ACP_clim/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ```  -->
-
-<!-- ## **Biomasse** -->
-<!-- La biomasse du pixel correspond à la production de la biocénose qui est directement utilisée lors d’un usage e.g. pour une consommation alimentaire (fourrage, fruits, insectes, poissons) ou pour une utilisation commerciale (bois, charbon, pétrole) ou récréative (poissons). L’usage des différentes biomasses entraîne un prélèvement et/ou une destruction de celle-ci. -->
-<!-- Cette dimension est déclinée en 3 catégories : quantité, qualité et productivité. -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[2] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quanti_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quanti_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-
-<!-- Interprétation des axes :   -->
-
-<!-- * Axe 1 : Cela correspond à des pixels productifs en végétation (bilan hydrique fort et biomasse abondante), donc aux forêts d'altitude plus basse. -->
-<!-- * Axe 2 : + = abondance feuillage 3; - = feuillage 0. Avec la carto on dirait que ce sont les patchs de landes qui ressortent (forêt et hautes altitudes ont des valeurs faibles). -->
-<!-- * Axe 3 : inverse de axe 2. -->
-
-<!-- Variation au cours du temps :   -->
-<!-- * Axe 1 : inversion en juillet et août du bilan hydrique, qui devient corrélé négativement. Sur la visualisation carto, on remarque que les valeurs élevées dans l'axe ne persistent que dans les altitudes les plus basses  -> plus basses donc plus sèches ? -->
-
-<!-- Conclusion : -->
-<!-- Ne garder que les 2 premiers axes. -->
-
-<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ```  -->
-
-<!-- ## **Physionomie de Végétation** -->
-<!-- La physionomie, définie comme l’aspect général d’une végétation, est le deuxième type de ressource directement lié à la biocénose (végétation). On s'intéresse spécifiquement à la structure de la végétation. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[3] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Interprétation des axes pour les variables quantitatives :   -->
-
-<!-- * Axe 1 :  -->
-<!-- * Axe 2 :  -->
-<!-- * Axe 3 :  -->
-
-<!-- Variation au cours du temps :  -->
-
-<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ``` -->
-<!-- ## **Contexte Spatial** -->
-<!-- Le contexte spatial se rapporte aux éléments du voisinage proche et lointain du pixel étudié. Il est décliné sous 3 caractéristiques : l’accessibilité, la similarité et l’information visuelle. -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[4] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_CS",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **quantitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quanti_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- ### Interprétation des axes :   -->
-
-<!-- * Axe 1 : pixels d'habitats similaires à leurs voisins, appartenant à de grands patchs, avec une visibilité faible -> milieux forestiers + falaises nord lac doménon.  -->
-<!-- ```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/CS/"),'.tif$',full.names = T,recursive=TRUE) -->
-
-<!-- paths_rast_ACP_axe1 = paths_rast_ACP[grep("axe1_",paths_rast_ACP)] -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- r1 <- raster(paths_rast_ACP_axe1[grep("mai",paths_rast_ACP_axe1)]) -->
-<!-- m1 <- mapview(r1,layer.name="Axe 1 - Mai",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r2 <- raster(paths_rast_ACP_axe1[grep("juin",paths_rast_ACP_axe1)]) -->
-<!-- m2 <- mapview(r2,layer.name="Axe 1 - Juin",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r3 <- raster(paths_rast_ACP_axe1[grep("juillet",paths_rast_ACP_axe1)]) -->
-<!-- m3 <- mapview(r3,layer.name="Axe 1 - Juillet",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r4 <- raster(paths_rast_ACP_axe1[grep("aout",paths_rast_ACP_axe1)]) -->
-<!-- m4 <- mapview(r4,layer.name="Axe 1 - Aout",col.regions=brewer.pal(5,"Blues")) -->
-<!-- r5 <- raster(paths_rast_ACP_axe1[grep("septembre",paths_rast_ACP_axe1)]) -->
-<!-- m5 <- mapview(r5,layer.name="Axe 1 - Septembre",col.regions=brewer.pal(5,"Blues")) -->
-
-<!-- ## view different aspects of same data set -->
-<!-- leafsync::sync(m1, m2, m3, m4, m5, ncol=5) -->
-<!-- ``` -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/> -->
-<!-- <br/>   -->
-<!-- * Axe 2 : pixels éloignés des points d'entrée, des infrastructures et des forêts. Donc plutôt la partie est de la zone. -->
-<!-- * Axe 3 : éloignés des lacs et rivières, avec une visibilité moyenne mais moyennement proche des infrastructures. -->
-
-<!-- Variation au cours du temps :  -->
-<!-- Aucune modification significative au cours du temps. -->
-
-<!-- ### Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ``` -->
-<!-- ## **Dynamique** -->
-<!-- Cette dimension caractérise la trajectoire d'évolution sur laquelle le pixel se positionne. Cette évolution est décrite de façon climatique et par le régime de perturbation. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[5] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_D",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Interprétation des axes pour les variables :   -->
-
-<!-- * Axe 1 :  -->
-<!-- * Axe 2 :  -->
-<!-- * Axe 3 :  -->
-
-<!-- Variation au cours du temps :  -->
-
-<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ``` -->
-<!-- ## **Infrastructures** -->
-<!-- Les infrastructures humaines physiques et virtuelles sont considérées comme une ressource fournit par le pixel. Celles-ci sont déclinées en deux catégories : l'artificialisation du sol et la protection réglementaire. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- dimension = liste.dim[6] -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/",dimension,"/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-
-<!-- Pourcentage de variance expliqué par les 3 premiers axes de l'AFDM (ou 2 premiers axes si la dimension analysée est composée de moins de 3 variables). -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 1** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 2** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables de la dimension analysée pour l'**axe 3** de l'AFDM. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_I",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-
-<!-- Distribution des variables **qualitatives** sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes1_2",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables **qualitatives** sur l'axe 2 et l'axe 3. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var_quali_axes2_3",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
-
-<!-- Interprétation des axes :   -->
-
-<!-- * Axe 1 : + degré artif 1 et 3, % infrastructure. Pixels artificialisés par des infrastructures (remontées mécaniques, refuge). -->
-<!-- * Axe 2 : + degré interdiction 2 ; - degré artif 2. Pixels de zones protégées (CEN). -->
-<!-- * Axe 3 : + degré artif 3. Ne discrimine quasiment rien. -->
-
-<!-- Variation au cours du temps :   -->
-<!-- Absence de variation. -->
-
-<!-- Synthèse :   -->
-<!-- Ne conserver que les 2 premiers axes. -->
-
-<!-- Tableau récapitulatif des variables utilisée dans la dimension : -->
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- table_output <- table_variables %>%  -->
-<!--   subset(Dimension == dimension)  -->
-
-<!-- kable(table_output) -->
-
-<!-- ``` -->
-
 
 # Analyse factorielle de chaque dimension {.tabset}
+On utilise des **ACP** (**Analyse en Composantes Principales**, ou PCA Principal Components Analysis anglais) pour traiter notre jeu de données.
+Les variables qualitatives sont au préalable transformées en variables booléennes (0/1) pour chaque modalité, et pondérées de telle sorte que toutes les variables booléennes correspondant à une variable qualitative ait le même poids qu'une variable quantitative.
 
-## Biomasse
+
+## **Biomasse**
+La biomasse du pixel correspond à la production de la biocénose qui est directement utilisée lors d’un usage e.g. pour une consommation alimentaire (fourrage, fruits, insectes, poissons) ou pour une utilisation commerciale (bois, charbon, pétrole) ou récréative (poissons). L’usage des différentes biomasses entraîne un prélèvement et/ou une destruction de celle-ci.
+Cette dimension est déclinée en 3 catégories : quantité, qualité et productivité.
+```{r, include=FALSE}
+type_donnees <- "B"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
 
 ### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
 ### Interprétation des axes
+
 Pourcentage de contribution des variables pour les 3 premiers axes de l'ACP
-Cartes des 3 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"YlOrBr"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"YlOrBr"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
 Description des axes
 
-## Conditions Abiotiques
-## Contexte Spatial
-## Dynamique
-## Infrastructures
-## Physionomie de Végétation
+-   Axe 1 :
+-   Axe 2 :
 
+* Axe 1 : Cela correspond à des pixels productifs en végétation (bilan hydrique fort et biomasse abondante), donc aux forêts d'altitude plus basse.
+* Axe 2 : + = abondance feuillage 3; - = feuillage 0. Avec la carto on dirait que ce sont les patchs de landes qui ressortent (forêt et hautes altitudes ont des valeurs faibles).
 
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
 
+## **Conditions Abiotiques**
+
+Cette dimension décrit les conditions abiotiques, donc les caractéristiques associées au pixel qui ne sont pas dépendantes des êtres vivants. Elle est déclinée en 3 catégories : le climat, la topographie et l'hydrologie.
+
+```{r, include=FALSE}
+type_donnees <- "CA"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 2 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Blues"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Blues"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
+
+* Axe 1 : décrit par les variables climatiques.
+Il représente des pixels aux températures basses, avec peu de nébulosité, ventés, enneigés, secs et gelés . On peut ici y lire un effet de l'altitude : ces caractéristiques sont liées à une augmentation de l'altitude.
+Cette hypothèse est vérifiée par la visualisation cartographique de l'axe 1 : ce sont bien des pixels d'altitude qui ont les valeurs les plus élevées (valeur dans l'axe d'ACP).
+* Axe 1 : corrélé + = landform 10, 7 et 3; corrélé - = landform 8, 4 et 1. A REGARDER
+
+* Axe 2 : décrit par les variables topographiques.
+Il représente des pixels pentus, avec une diversité de reliefs élevée, ESATING POSITIF = ?? face est ou ouest ?
+avec un potentiel hydrique faible et peu de rayonnement. Ici, le contraste se fait donc plus sur l'inclinaison du terrain, ce qui est confirmé visualisation cartographique (valeurs faibles pour les zones plates et élevées pour les crêtes).
+* Axe 2 : corrélé + = landform 8; corrélé - = présence d'eau,landform 5.
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
+
+## **Contexte Spatial**
+Le contexte spatial se rapporte aux éléments du voisinage proche et lointain du pixel étudié. Il est décliné sous 3 caractéristiques : l’accessibilité, la similarité et l’information visuelle.
+```{r, include=FALSE}
+type_donnees <- "CS"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 2 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Reds"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Reds"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
+
+* Axe 1 : pixels d'habitats similaires à leurs voisins, appartenant à de grands patchs, avec une visibilité faible -> milieux forestiers + falaises nord lac doménon.
+* Axe 2 : pixels éloignés des points d'entrée, des infrastructures et des forêts. Donc plutôt la partie est de la zone.
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
+
+## **Dynamique**
+Cette dimension caractérise la trajectoire d'évolution sur laquelle le pixel se positionne. Cette évolution est décrite de façon climatique et par le régime de perturbation.
+```{r, include=FALSE}
+type_donnees <- "D"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 2 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Purples"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Purples"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
+
+## **Infrastructures**
+Les infrastructures humaines physiques et virtuelles sont considérées comme une ressource fournit par le pixel. Celles-ci sont déclinées en deux catégories : l'artificialisation du sol et la protection réglementaire.
+
+```{r, include=FALSE}
+type_donnees <- "I"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 2 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Greys"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Greys"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
+
+* Axe 1 : + degré artif 1 et 3, % infrastructure. Pixels artificialisés par des infrastructures (remontées mécaniques, refuge).
+* Axe 2 : + degré interdiction 2 ; - degré artif 2. Pixels de zones protégées (CEN).
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
+
+## **Physionomie de Végétation**
+La physionomie, définie comme l’aspect général d’une végétation, est le deuxième type de ressource directement lié à la biocénose (végétation). On s'intéresse spécifiquement à la structure de la végétation.
+```{r, include=FALSE}
+type_donnees <- "PV"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 2 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r,out.width="50%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` |
+|---------|---------|
+|         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Greens"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Greens"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, ncol=2)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
+
+Tableau récapitulatif des variables utilisée dans la dimension :
+```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
+table_output <- table_variables %>%
+  subset(Dimension == type_donnees)
+kable(table_output)
+```
 
 # Analyse factorielle sur les axes des ACPs de chaque dimension
+Après avoir effectué 6 ACPs sur les 6 dimensions, on réalise à nouveau une ACP sur les deux premiers axes issus des analyses factorielles des dimensions.
+
+
+```{r, include=FALSE}
+type_donnees <- "ACP_ACP"
+tout = list.files(recursive = T, paste0(output_path,type_donnees,"/summer/sans_ponderation/plot_rmd"), full.names = T)
+```
+
+### Eboulis variance, cercles de corrélation et distribution des individus (sur une même ligne)
+
+```{r,out.width="25%",fig.show='hold', echo=FALSE, warning=FALSE}
+p1 = tout[grep("eboulis_variance",tout)]
+p2 = tout[grep("cercle_correlation_axe1_2",tout)]
+p3 = tout[grep("cercle_correlation_axes2_3",tout)]
+p4 = tout[grep("graph_individus_",tout)]
+include_graphics(c(p1,p2,p3,p4))
+```
+
+### Interprétation des axes
+
+Pourcentage de contribution des variables pour les 3 premiers axes de l'ACP
+
+| `Axe 1` | `Axe 2` | `Axe 3` |
+|---------|---------|---------|
+|         |         |         |
+
+```{r,out.width="33%",fig.show='hold', echo=FALSE, warning=FALSE}
+C1 = tout[grep("contrib_axe",tout)]
+include_graphics(c(C1[grep("1",C1)],C1[grep("2",C1)],C1[grep("3",C1)]))
+```
+
+Cartes des 2 premiers axes
+
+| `Axe 1` | `Axe 2` | `Axe 3` |
+|---------|---------|---------|
+|         |         |         |
+
+```{r, echo=FALSE,out.width="100%",fig.show='hold',message=FALSE,warning=FALSE}
+paths_rast_ACP <- list.files(paste0(output_path,type_donnees,"/summer/sans_ponderation/"),
+                             '.tif$',full.names = T,recursive=F)
+mapviewOptions(na.color = "transparent",
+               basemaps="OpenStreetMap",
+               viewer.suppress=TRUE,
+               trim=TRUE)
+r1 <- raster(paths_rast_ACP[grep("1_",paths_rast_ACP)])
+m1 <- mapview(r1,layer.name="Axe 1",col.regions=brewer.pal(5,"Spectral"))
+r2 <- raster(paths_rast_ACP[grep("2_",paths_rast_ACP)])
+m2 <- mapview(r2,layer.name="Axe 2",col.regions=brewer.pal(5,"Spectral"))
+r3 <- raster(paths_rast_ACP[grep("3_",paths_rast_ACP)])
+m3 <- mapview(r2,layer.name="Axe 3",col.regions=brewer.pal(5,"Spectral"))
+
+## view different aspects of same data set
+leafsync::sync(m1, m2, m3, ncol=3)
+```
+
+Description des axes
+
+-   Axe 1 :
+-   Axe 2 :
 
 # Tableau récapitulatif des variables utilisées
 ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE}
 kable(table_variables)
 
 ``` 
-
-<!-- # Analyse factorielle sur les axes des ACPs de chaque dimensions {.tabset} -->
-<!-- ## Graphiques -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- tout = list.files(recursive = T, paste0(wd,"/output/ACP/ACP_FAMD/"), full.names = T) -->
-<!-- table_variables <- fread(path_table_variables, header=T) -->
-<!-- ```  -->
-
-<!-- |`        Mai          `|`          Juin         `|`          Juillet           `|`          Août          `|`          Septembre    `| -->
-<!-- |----|----|----|----|----| -->
-<!-- |` `|` `|` `|` `|` `| -->
-
-<!-- Pourcentage de variance expliqué par les axes de l'ACP. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- eboulis = tout[grep("eboulis_variance",tout)] -->
-<!-- include_graphics(c(eboulis[grep("mai",eboulis)],eboulis[grep("juin",eboulis)], -->
-<!--                    eboulis[grep("juillet",eboulis)],eboulis[grep("aout",eboulis)], -->
-<!--                    eboulis[grep("septembre",eboulis)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables pour l'**axe 1** de l'ACP. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C1 = tout[grep("contrib_axe1",tout)] -->
-<!-- include_graphics(c(C1[grep("mai",C1)],C1[grep("juin",C1)], -->
-<!--                    C1[grep("juillet",C1)],C1[grep("aout",C1)], -->
-<!--                    C1[grep("septembre",C1)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables pour l'**axe 2** de l'ACP. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C2 = tout[grep("contrib_axe2",tout)] -->
-<!-- include_graphics(c(C2[grep("mai",C2)],C2[grep("juin",C2)], -->
-<!--                    C2[grep("juillet",C2)],C2[grep("aout",C2)], -->
-<!--                    C2[grep("septembre",C2)])) -->
-<!-- ```  -->
-
-<!-- Pourcentage de contribution des variables pour l'**axe 3** de l'ACP. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- C3 = tout[grep("contrib_axe3",tout)] -->
-<!-- include_graphics(c(C3[grep("mai",C3)],C3[grep("juin",C3)], -->
-<!--                    C3[grep("juillet",C3)],C3[grep("aout",C3)], -->
-<!--                    C3[grep("septembre",C3)])) -->
-<!-- ```  -->
-
-<!-- Distribution des pixels sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DI = tout[grep("graph_ind",tout)] -->
-<!-- include_graphics(c(DI[grep("mai",DI)],DI[grep("juin",DI)], -->
-<!--                    DI[grep("juillet",DI)],DI[grep("aout",DI)], -->
-<!--                    DI[grep("septembre",DI)])) -->
-<!-- ```  -->
-
-<!-- Distribution des variables sur l'axe 1 et l'axe 2. -->
-
-<!-- ```{r,out.width="20%",fig.show='hold', echo=FALSE, warning=FALSE} -->
-<!-- DV = tout[grep("graph_var",tout)] -->
-<!-- include_graphics(c(DV[grep("mai",DV)],DV[grep("juin",DV)], -->
-<!--                    DV[grep("juillet",DV)],DV[grep("aout",DV)], -->
-<!--                    DV[grep("septembre",DV)])) -->
-<!-- ```  -->
 
 <!-- ## Cartes {.tabset} -->
 
@@ -1004,44 +558,11 @@ kable(table_variables)
 
 <!-- ### Juin -->
 
-<!-- ```{r, echo=FALSE,fig.align="center",message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/ACP_FAMD/06juin/"),'.tif$',full.names = T) -->
-<!-- r <- stack(paths_rast_ACP) -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- viewRGB(r) -->
-<!-- ``` -->
 
 <!-- ### Juillet -->
-<!-- ```{r, echo=FALSE,fig.align="center",message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/ACP_FAMD/07juillet/"),'.tif$',full.names = T) -->
-<!-- r <- stack(paths_rast_ACP) -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- viewRGB(r) -->
-<!-- ``` -->
+
 <!-- ### Août -->
-<!-- ```{r, echo=FALSE,fig.align="center",message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/ACP_FAMD/08aout/"),'.tif$',full.names = T) -->
-<!-- r <- stack(paths_rast_ACP) -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- viewRGB(r) -->
-<!-- ``` -->
+
 
 <!-- ### Septembre -->
-<!-- ```{r, echo=FALSE,fig.align="center",message=FALSE,warning=FALSE} -->
-<!-- paths_rast_ACP <- list.files(paste0(wd,"/output/ACP/ACP_FAMD/09septembre/"),'.tif$',full.names = T) -->
-<!-- r <- stack(paths_rast_ACP) -->
-<!-- mapviewOptions(na.color = "transparent", -->
-<!--                basemaps="OpenStreetMap", -->
-<!--                viewer.suppress=TRUE, -->
-<!--                trim=TRUE) -->
-<!-- viewRGB(r) -->
-<!-- ``` -->
+
