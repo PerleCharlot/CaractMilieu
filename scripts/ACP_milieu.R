@@ -45,12 +45,14 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # palette_couleur = palette_couleur
   # ponderation = ponderation
   
-  # table_donnees = dt_stack
+  # table_donnees = dt_stacks
   # saison = "summer"
-  # dimension = "ACP_ACP"
-  # palette_couleur = palette_couleur
-  # ponderation = FALSE
+  # #dimension = dimension
+  # #palette_couleur = palette_couleur
+  # #ponderation = FALSE
+  # predict = FALSE
   
+
   corresp = data.frame(numero_saison=c("05","06","07","08","09"),
                        periode = c("mai",'juin','juillet','aout','septembre'))
   num_saison = corresp$numero_saison[which(corresp$periode == saison)]
@@ -119,7 +121,7 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   # Identifier index vars à rendre booléennes
   extr_tb = table_variables[table_variables$Nom %in% names(tbl_data), ]
   names_var_quali =  extr_tb$Nom[which(extr_tb$Nature == "qualitative")] 
-
+  
   # Check for dummies variables
   t = try(dummy_cols(tbl_data, remove_selected_columns=T), silent = TRUE)
   if(inherits(t, "try-error")) {
@@ -131,10 +133,24 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
                             select_columns=names_var_quali,
                             remove_selected_columns=T)
     
+    # retirer _ dans noms dummies
+    f <- function(x){
+      a <- unlist(strsplit(x,"_"))
+      if(length(a)>2){
+        new.name <- paste0(paste0(a[1:2],collapse="_"),
+                           a[3],collapse="") 
+      }else{
+        new.name <- paste0(a,collapse="") 
+      }
+      return(new.name)
+    }
+    index_dummies <- grep(pattern=paste0(names_var_quali,collapse = "|"), names(tbl_data2))
+    names(tbl_data2)[index_dummies] <- unlist(lapply(names(tbl_data2)[index_dummies],f))
+
     # Matrice de pondération des variables dans ACP par dimension
-    df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
-    df_quanti = table_variables[table_variables$Nom %in% names(tbl_data2)]
-    df_w = rbind(df_quanti, df_dum)
+    df_dum <- table_variable_dummies[table_variable_dummies$Nom %in% names(tbl_data2)]
+    df_quanti <- table_variables[table_variables$Nom %in% names(tbl_data2)]
+    df_w <- rbind(df_quanti, df_dum, fill=T)
   }
   
   # Dans tous les cas, les variables dummies sont pondérées
@@ -157,11 +173,11 @@ makePCA <- function(table_donnees, saison, dimension, palette_couleur, ponderati
   #sum(na.omit(W))
   W[is.na(W)] <- 0
   
-  # Dans ACP_ACP, les poids sont nulles -> les passer à 1
-  W[] <- 1
+  # # TODO : il faut que cette condition puisse s'appliquer ou non
+  # # Dans ACP_ACP, les poids sont nulles -> les passer à 1
+  # W[] <- 1
   
   # Plutot que les retirer, les considérer en vars supplémentaires
-  
   idx_vars_quali_sup = grep("^month$", names(tbl_data2))
   if(length(idx_vars_quali_sup) > 0){
     idx_vars_quali_sup = grep("^month$", names(tbl_data2))
@@ -617,7 +633,7 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
   # # TEST
   # mois = "mai"
   # ponderation = FALSE # TRUE FALSE
-  # mode = "ACP_ACP" # "dimensions" "ACP_ACP" "globale"
+  # mode = "dimensions" # "dimensions" "ACP_ACP" "globale"
   
   pond <- ifelse(ponderation,"avec","sans")
   
@@ -625,7 +641,7 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
     # Dossier où seront stockées les prédictions
     chemin_stock <- paste0(output_path,"/ACP/",liste.dim,"/summer/",pond,"_ponderation/")
     # Dossiers où récuperer les rasters sur lesquels il faut appliquer la transformation (ACP)
-    dirs_mois = list.dirs(paste0(path_dos_stack))[grep(mois, list.dirs(paste0(path_dos_stack)))]
+    dirs_mois <- list.dirs(paste0(path_dos_stack))[grep(mois, list.dirs(paste0(path_dos_stack)))]
     # # Chemin ACP à utiliser
     # liste_PCA = paste0(chemin_stock,"/PCA.rdata")
     cat("Applications d'ACPs sur les dimensions B, CA, PV, I, CS et D, une par une. \n")
@@ -653,7 +669,7 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
   }
 
   # Chemin ACP à utiliser
-  liste_PCA = paste0(chemin_stock,"/PCA.rdata")
+  liste_PCA <- paste0(chemin_stock,"/PCA.rdata")
   
   if(!any(dir.exists(paste0(chemin_stock,"/pred_month/",mois,"/")))){
     lapply(paste0(chemin_stock,"/pred_month/",mois,"/"), function(x) dir.create(x,recursive=T))
@@ -661,8 +677,8 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
 
   StackandPred <- function(dossier_input,nom_dim=FALSE){
     # # TEST
-    # dossier_input = dirs_mois
-    # nom_dim = FALSE
+    # dossier_input = dirs_mois[1]
+    # nom_dim = TRUE
     
     files_mois = list.files(dossier_input,".tif$", full.names = T)
     stack_mois <- stack(lapply(files_mois ,stack))
@@ -680,6 +696,8 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
     dt_stack[liste_nom_var_quali] <- lapply(dt_stack[liste_nom_var_quali] , factor)
     cat(paste0("\nPréparation table des variables pour le mois de ",mois," effectuée.\n"))
     
+    stock <- dt_stack
+    
     # Check for dummies variables
     t = try(dummy_cols(dt_stack, remove_selected_columns=T), silent = TRUE)
     if(inherits(t, "try-error")) {
@@ -690,11 +708,24 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
       dt_stack <- dummy_cols(dt_stack, 
                              select_columns=liste_nom_var_quali,
                              remove_selected_columns=T)
+      # retirer _ dans noms dummies
+      f <- function(x){
+        a <- unlist(strsplit(x,"_"))
+        if(length(a)>2){
+          new.name <- paste0(paste0(a[1:2],collapse="_"),
+                             a[3],collapse="") 
+        }else{
+          new.name <- paste0(a,collapse="") 
+        }
+        return(new.name)
+      }
+      index_dummies <- grep(pattern=paste0(liste_nom_var_quali,collapse = "|"), names(dt_stack))
+      names(dt_stack)[index_dummies] <- unlist(lapply(names(dt_stack)[index_dummies],f))
       
       # Matrice de pondération des variables dans ACP par dimension
       df_dum = table_variable_dummies[table_variable_dummies$Nom %in% names(dt_stack)]
       df_quanti = table_variables[table_variables$Nom %in% names(dt_stack)]
-      df_w = rbind(df_quanti, df_dum)
+      df_w = rbind(df_quanti, df_dum, fill=T)
     }
     # Retirer les coordonnées x et y
     idx_vars_quanti_sup = c(grep("^x$", names(dt_stack)),grep("^y$", names(dt_stack)))
@@ -724,7 +755,7 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
     # Load PCA
     load(chemin_PCA)
     # appliquer transfo ACP
-    dt_predPCA = predict.PCA(object = res.pca, newdata =  dt_stack2)
+    dt_predPCA <- predict.PCA(object = res.pca, newdata =  dt_stack2)
     # # vérifier les noms des variables
     # names(res.pca$call$X)
     # names(dt_stack2)
@@ -771,7 +802,7 @@ applyPCAtransformation <- function(mois, # "mai" "juin" etc
     lapply(1:n_rast, function(x) createRasterPCA(number=x, table=table_all, mois = mois))
   }
   
-  # a l'air de finctionner
+  # a l'air de fonctionner
   if(mode == "dimensions"){
     lapply(as.list(dirs_mois),function(x) StackandPred(dossier_input = x,
                                                        nom_dim = TRUE))
@@ -816,7 +847,8 @@ liste.mois = c("mai","juin","juillet","aout","septembre")
 ### Programme -------------------------------------
 table_variables <- fread(path_table_variables)
 table_variable_dummies <- fread(path_table_variables_dummies, dec=",")
-col_dim = merge(rbind(table_variables, table_variable_dummies), corresp_col,by.x="Dimension", by.y="dim_name")
+col_dim = merge(rbind(table_variables, table_variable_dummies,fill=T), 
+                corresp_col,by.x="Dimension", by.y="dim_name"                )
 mypalette <- setNames(col_dim$colour_dim, 
                       col_dim$Nom)
 
@@ -863,14 +895,15 @@ lapply(liste.dim, function(x) fct_PCA(dimension = x,
                                       palette_couleur=mypalette,
                                       ponderation = FALSE)
 )
+# application transformation ACP sur chaque mois
+lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
+                                                      ponderation= FALSE,
+                                                      mode = "dimensions"))
 
 ##### ACP d'ACPs des dimensions ####
 
 ACP_axesPCA(palette_couleur=mypalette)
-# fonctionne
-lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
-                                                      ponderation= FALSE,
-                                                      mode = "dimensions"))
+
 # fonctionne
 lapply(liste.mois, function(x) applyPCAtransformation(mois = x,
                                                       ponderation= FALSE,
